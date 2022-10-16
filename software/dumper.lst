@@ -76,9 +76,9 @@
 0076   F014 79 00 06            ADC     %$0,R6      ; ripple carry to high byte
 0077   F017 D3 05               INC     R5          ; increment source
 0078   F019 79 00 04            ADC     %$0,R4      ; ripple carry to high byte
-0079   F01C 7D F0 04            CMP     %$F0,R4     ; am I at high byte of ENDCODE?
+0079   F01C 7D F0 04            CMP     %(ENDCODE/$100),R4          ; am I at high byte of ENDCODE?
 0080   F01F E6 ED               JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
-0081   F021 7D 83 05            CMP     %$83,R5     ; am I at low byte of ENDCODE?
+0081   F021 7D 83 05            CMP     %$(ENDCODE%$100),R5         ; am I at low byte of ENDCODE?
 0082   F024 E6 E8               JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
 0083   F026             
 0084   F026                     ; We reached ENDCODE, so our code copy to RAM is done
@@ -157,7 +157,7 @@
 0157   FFF8                     .ORG    0FFF8H
 0158   FFF8             
 0159   FFF8                     .MSFIRST            ; need this, or .word statements are backwards for this CPU
-0160   FFF8                     
+0160   FFF8             
 0161   FFF8 F0 00               .word   START
 0162   FFFA F0 00               .word   START
 0163   FFFC F0 00               .word   START

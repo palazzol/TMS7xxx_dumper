@@ -57,7 +57,7 @@ RAMDEST .equ    $002C       ; location in ram for the code to be copied into and
         .ORG    $E000       ; building 8K image for original 8K battery-backed SRAM design
         .BYTE   00          ; need this, or we don't get an 8K image
 
-        .ORG    $F000
+        .ORG    $F000       ; start code in the last 4K of memory
 
         ; Initialize port, stack
 START:
@@ -76,9 +76,9 @@ CPYLOOP:
         ADC     %$0,R6      ; ripple carry to high byte
         INC     R5          ; increment source
         ADC     %$0,R4      ; ripple carry to high byte
-        CMP     %$F0,R4     ; am I at high byte of ENDCODE?
+        CMP     %(ENDCODE/$100),R4          ; am I at high byte of ENDCODE?
         JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
-        CMP     %$83,R5     ; am I at low byte of ENDCODE?
+        CMP     %$(ENDCODE%$100),R5         ; am I at low byte of ENDCODE?
         JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
 
         ; We reached ENDCODE, so our code copy to RAM is done
@@ -157,7 +157,7 @@ ENDCODE:
         .ORG    0FFF8H
 
         .MSFIRST            ; need this, or .word statements are backwards for this CPU
-        
+
         .word   START
         .word   START
         .word   START
