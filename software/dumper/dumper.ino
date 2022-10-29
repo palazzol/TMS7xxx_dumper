@@ -19,7 +19,7 @@ constexpr int CLK_PIN=13;
 
 // globals
 uint16_t g_count;
-uint16_t g_checksum;
+uint8_t g_checksum;
 
 void clockPulse()
 {
@@ -51,7 +51,7 @@ void setup() {
   SPCR |= _BV(SPE); 
 
   // Enable serial port
-  Serial.begin(250000);
+  Serial.begin(115200);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }

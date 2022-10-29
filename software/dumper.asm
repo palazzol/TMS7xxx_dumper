@@ -20,7 +20,7 @@
 ; ~INT1 and ~INT3 wired to +5 - pins 13 and 12 on DIP
 ; Port B, bit 0 - Pin 3 on DIP  - MC Pin is connected here, along with a 4.7k pullup 
 ; Port B, bit 1 - Pin 4 on DIP  - MOSI - Bits appear here
-; Port B, bit 2 - Pin 5 on DIP  - SCLK - Falling Edge happens during bit, then rises before next bit is output
+; Port B, bit 2 - Pin 5 on DIP  - SCLK - Rising Edge happens during bit
 ; Port B, bit 3 - Pin 37 on DIP - ~SS
 ;
 ; When External Memory is enabled:
@@ -108,7 +108,7 @@ NXTBYTE:
 NXTBIT:
         ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
 
-        RL      A           ; get each bit, LSB first
+        RL      A           ; get each bit, MSB first
         JHS     DOONE       ; if 1, jump
         ANDP    %$FD,BPORT  ; PORTB.1 = MOSI = 0
         JMP     AHEAD
