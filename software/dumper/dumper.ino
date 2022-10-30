@@ -17,9 +17,11 @@ constexpr int MOSI_PIN=11;
 constexpr int MISO_PIN=12;
 constexpr int CLK_PIN=13;
 
+#include "SRecWriter.h"
+
 // globals
 uint16_t g_count;
-uint8_t g_checksum;
+SRecWriter g_writer;
 
 void clockPulse()
 {
@@ -47,7 +49,7 @@ void setup() {
   digitalWrite(nRESET_PIN, LOW);
 
   // Enable SPI in slave mode
-  // (protocol is compatible with default settings)
+  // (protocol is compatible with default SPI settings)
   SPCR |= _BV(SPE); 
 
   // Enable serial port
@@ -55,7 +57,8 @@ void setup() {
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
-
+  g_writer.setSerial(Serial);
+  
   // Clock some while reset
   for(int i=0; i<100; i++) {
     clockPulse();
@@ -66,7 +69,11 @@ void setup() {
 
   // Init globals
   g_count = 0;
-  g_checksum = 0;
+
+  // Print header
+  Serial.println();
+  Serial.println("PIC70XX / TMS70XX Dumper - v1.0");
+  Serial.println("Dump of region 0xF000-0xFFFF (4K), in Motorola S-Record Format:");
 }
 
 void loop() {
@@ -79,51 +86,13 @@ void loop() {
 
   // Grab the data byte
   volatile uint8_t x = SPDR;
-  
-  // S-Record header
-  if (g_count == 0)
-  {
-    Serial.println();
-    Serial.println("PIC70XX / TMS70XX Dumper - v1.0");
-    Serial.println("Dump of region 0xF000-0xFFFF (4K), in Motorola S-Record Format:");
-    Serial.print("S00600004844521B");
-  }
-  // Beginning of S1 line
-  if (g_count%0x20 == 0)
-  {
-    g_checksum = 0;
-    Serial.println();
-    Serial.print("S123");
-    if (g_count < 0x0010)
-      Serial.print("000");
-    else if (g_count < 0x0100)
-      Serial.print("00");
-    else if (g_count < 0x1000)
-      Serial.print("0");
-    Serial.print(g_count, HEX);
-  }
-  // Add the data byte
-  if (x<0x10)
-    Serial.print("0");
-  Serial.print(x, HEX);
-  // Increment Checksum
-  g_checksum += x;
-  // Write checksum byte and reset checksum
-  if (g_count%0x20 == 0x1f)
-  {
-    g_checksum ^= 0xff;
-    if (g_checksum < 0x10)
-      Serial.print("0");
-    Serial.print(g_checksum, HEX);
-    g_checksum = 0;
-  }
-  // Write final part of file
-  if (g_count%0x1000 == 0x0fff)
-  {
-    Serial.println();
-    Serial.println("S50300807C");
-    Serial.println("S9030000FC");
-  }
-  g_count++;
 
+  // Dump out in S19 format, until we have 4K
+  if (g_count < 0x1000)
+  {
+    g_writer.addData(x);
+    g_count++;
+    if (g_count == 0x1000)
+      g_writer.finish();
+  }
 }
