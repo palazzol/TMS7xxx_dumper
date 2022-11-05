@@ -1,10 +1,11 @@
 ;
 ; Original Code and hardware by Frank Palazzolo
 ; Code written and working sometime in the early 2000's
-; Source Reverse-engineered from Binary(!) 2022-October
+; Source Reverse-engineered from Binary(!)
+; And updated for standard SPI master interface - 2022-October
 ;
 ; This code can be built with TASM Version 3.2:
-;   tasm -70 -g3 -f00 -c dumper.asm dumper.bin
+;   tasm -70 -g3 -fff -c dumper.asm dumper.bin
 ;
 ; Dumper code for:
 ;       PIC7020, TMS7020 - 2K bytes ROM, 128 bytes RAM
@@ -17,10 +18,11 @@
 ; Hardware connections:
 ;
 ; ~INT1 and ~INT3 wired to +5 - pins 13 and 12 on DIP
-; Port B, bit 0 - Pin 3 on DIP - MC Pin is connected here, along with a 4.7k pullup 
-; Port B, bit 1 - Pin 4 on DIP - DATA - Bits appear here
-; Port B, bit 2 - Pin 5 on DIP - CLK  - Falling Edge happens during bit, then rises before next bit is output
-; 
+; Port B, bit 0 - Pin 3 on DIP  - MC Pin is connected here, along with a 4.7k pullup 
+; Port B, bit 1 - Pin 4 on DIP  - MOSI - Bits appear here
+; Port B, bit 2 - Pin 5 on DIP  - SCLK - Rising Edge happens during bit
+; Port B, bit 3 - Pin 37 on DIP - ~SS
+;
 ; When External Memory is enabled:
 ;
 ; Port B, bit 4 - Pin 38 on DIP - ALATCH
@@ -54,14 +56,11 @@ BPORT   .equ    6
 
 RAMDEST .equ    $002C       ; location in ram for the code to be copied into and run from
 
-        .ORG    $E000       ; building 8K image for original 8K battery-backed SRAM design
-        .BYTE   00          ; need this, or we don't get an 8K image
-
-        .ORG    $F000       ; start code in the last 4K of memory
+        .ORG    $F800       ; start code in the last 2K of memory
 
         ; Initialize port, stack
 START:
-        MOVP    %$FF,BPORT  ; PORTB = FF, PORTB.0=1 (MC high, make sure external ROM enabled)
+        MOVP    %$FF,BPORT  ; PORTB = FF, PORTB=All ones (MC high, make sure external ROM enabled)
         MOV     %$0C,B      ; B  = 0C
         LDSP                ; SP = 000C - we don't use stack anyway
 
@@ -83,7 +82,6 @@ CPYLOOP:
 
         ; We reached ENDCODE, so our code copy to RAM is done
 
-        MOVD    %$F100,R7   ; R7 = F100, location to try to write total number of bytes to
         MOV     %$1,R10     ; R10 = 1, Times to do the dump
 
         BR      @RAMDEST    ; jump to code in RAM
@@ -98,51 +96,35 @@ DELAY:
         DEC     B           ; B = B-1
         JNZ     DELAY       ; wait a bit for things to settle
 DODUMP:
-        MOVD    %$F000,R5   ; R5 = F000, (Start of Internal ROM)
+        MOVD    %$F000,R5   ; R5 = F000, (Start of 4K Internal ROM)
         MOVD    %$0000,R9   ; R9 = 0000, byte counter
+        ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+        ANDP    %$F7,BPORT  ; PORTB.3 = ~SS = 0
 NXTBYTE:
         LDA     *R5         ; Read internal ROM byte
         ADD     R0,R9       ; Add 1 to byte counter
         ADC     %$0,R8      ; ripple carry to high byte of byte counter
         MOV     %$8,R2      ; R2 = 8, bit counter?
 NXTBIT:
-        RR      A           ; get each bit, LSB first
+        ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+
+        RL      A           ; get each bit, MSB first
         JHS     DOONE       ; if 1, jump
-        ANDP    %$FD,BPORT  ; PORTB.1 = 0
+        ANDP    %$FD,BPORT  ; PORTB.1 = MOSI = 0
         JMP     AHEAD
 DOONE:
-        ORP     %$02,BPORT  ; PORTB.1 = 1
+        ORP     %$02,BPORT  ; PORTB.1 = MOSI = 1
 AHEAD:
-
-        MOV     %$10,B      ; small delay
-SDELAY:
-        DEC     B
-        JNZ     SDELAY
-
-        ANDP    %$FB,BPORT  ; PORTB.2 = 0
-
-        MOV     %$10,B      ; small delay
-SDELAY1:
-        DEC     B
-        JNZ     SDELAY1
-
-        ORP     %$04,BPORT  ; PORTB.2 = 1
+        ORP     %$04,BPORT  ; PORTB.2 = SCK = 1
         DEC     R2          ; decrement bit counter
         JNZ     NXTBIT      ; do next bit
+
         INC     R5          ; increment for next location to read
         ADC     %$0,R4
         JNZ     NXTBYTE     ; unless we roll over to 0000, do next byte
 
-        ; Try to write the total number of bytes read (2 bytes) on this pass
-        ; starting at F100, but this doesn't work because we are still in internal ROM mode
-        ; (those addresses are ROM)
-
-        MOV     R8,A
-        STA     *R7
-        INC     R7
-        MOV     R9,A
-        STA     *R7
-        INC     R7
+        ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+        ORP     %$08,BPORT  ; PORTB.3 = ~SS = 1
 
         DEC     R10         ; Do it R10 times
         JNZ     DODUMP
