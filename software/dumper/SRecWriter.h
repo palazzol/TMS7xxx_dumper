@@ -13,6 +13,8 @@ class SRecWriter {
 public:
   // Create a Writer
   SRecWriter();
+  // Reset the state to completely uninitialized
+  void reset();
   // Pass in Serial port to write to
   void setSerial(const Stream &s);
   // Set the current address, defaults to 0x000 at startup

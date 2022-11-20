@@ -3,6 +3,12 @@
 
 SRecWriter::SRecWriter()
 {
+  reset();
+}
+
+void SRecWriter::reset()
+{
+  serial = nullptr;   
   S0_written = false;
   line_address = 0x0000;
   line_offset = 0x00;

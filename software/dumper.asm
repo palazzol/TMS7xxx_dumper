@@ -3,6 +3,7 @@
 ; Code written and working sometime in the early 2000's
 ; Source Reverse-engineered from Binary(!)
 ; And updated for standard SPI master interface - 2022-October
+; Added Chip ID functions, 2022-November
 ;
 ; This code can be built with TASM Version 3.2:
 ;   tasm -70 -g3 -fff -c dumper.asm dumper.bin
@@ -42,8 +43,10 @@
 ; If chip only has 2K internal ROM, it will be in the last 2K of the data
 ;
 
-R0      .equ    0
+;R0      .equ    0   ; AKA A Register
+;R1      .equ    1   ; AKA B Register
 R2      .equ    2
+R3      .equ    3
 R4      .equ    4
 R5      .equ    5
 R6      .equ    6
@@ -53,6 +56,7 @@ R9      .equ    9
 R10     .equ    10
 
 BPORT   .equ    6
+SCTL1   .equ    21
 
 RAMDEST .equ    $002C       ; location in ram for the code to be copied into and run from
 
@@ -63,6 +67,90 @@ START:
         MOVP    %$FF,BPORT  ; PORTB = FF, PORTB=All ones (MC high, make sure external ROM enabled)
         MOV     %$0C,B      ; B  = 0C
         LDSP                ; SP = 000C - we don't use stack anyway
+
+        ; Try to identify this chip and store a code in R3
+
+RAMCHK:
+        ; Identify RAM size:
+        ; do checks twice with different data,
+        ; to protect against random luck matches
+
+        MOV     %$AA,$ff
+        MOV     %$55,$7f
+        CMP     %$55,$7f    ; check for 128 bytes working
+        JNZ     RAMFAIL
+        CMP     %$AA,$ff    ; check for 256 bytes working
+        JNZ     RAM128
+        MOV     %$55,$ff
+        MOV     %$AA,$7f
+        CMP     %$AA,$7f
+        JNZ     RAMFAIL     ; check for 128 bytes working
+        CMP     %$55,$ff    ; check for 256 bytes working
+        JZ      RAM256
+RAM128:
+        MOV     %$00,R3     ; 128 bytes
+        JMP     SERCHK
+RAM256:
+        MOV     %$02,R3     ; 256 bytes
+        JMP     SERCHK
+RAMFAIL:
+        MOV     %$80,R3     ; error in ram check
+
+        ; Try to store bottom two bits of SCTL1 register and see if they stay
+        ; if so, we have a UART
+SERCHK:
+        ANDP    %$FC,SCTL1  ; zero the 2 LS bits
+        MOVP    SCTL1,A
+        AND     %$03,A
+        JNZ     SERFAIL     ; fail if not zero
+        ORP     %$01,SCTL1  ; set the bottom bit
+        MOVP    SCTL1,A
+        AND     %$03,A 
+        CMP     %$01,A      ; check if it's a one now
+        JNZ     SERFAIL     ; or fail
+        ORP     %$02,SCTL1  ; set the next bit
+        MOVP    SCTL1,A
+        AND     %$03,A 
+        CMP     %$03,A      ; should be 3 now
+        JNZ     SERFAIL     ; if not fail
+SERFOUND:
+        OR      %$01,R3     ; UART detected, set this bit
+SERFAIL:
+
+        ; Send the ID byte back via SPI
+
+        MOV     R3,A        ; byte in A
+        MOV     %$08,R2     ; 8 bits in counter
+
+        ; Start SPI byte
+        ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+        ANDP    %$F7,BPORT  ; PORTB.3 = ~SS = 0
+
+NXTBIT1:
+        ; reset SCK
+        ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+
+        ; MSB first
+        RL      A           ; get each bit, MSB first
+
+        ; Write MOSI
+        JHS     DOONE1      ; if 1, jump
+        ANDP    %$FD,BPORT  ; PORTB.1 = MOSI = 0
+        JMP     AHEAD1
+DOONE1:
+        ORP     %$02,BPORT  ; PORTB.1 = MOSI = 1
+AHEAD1:
+
+        ; set SCK
+        ORP     %$04,BPORT  ; PORTB.2 = SCK = 1
+
+        ; next bit
+        DEC     R2          ; decrement bit counter
+        JNZ     NXTBIT1     ; do next bit
+
+        ; shut down SPI
+        ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+        ORP     %$08,BPORT  ; PORTB.3 = ~SS = 1
 
         ; Copy code from External ROM to RAM
 
@@ -102,7 +190,7 @@ DODUMP:
         ANDP    %$F7,BPORT  ; PORTB.3 = ~SS = 0
 NXTBYTE:
         LDA     *R5         ; Read internal ROM byte
-        ADD     R0,R9       ; Add 1 to byte counter
+        ADD     %$1,R9      ; Add 1 to byte counter
         ADC     %$0,R8      ; ripple carry to high byte of byte counter
         MOV     %$8,R2      ; R2 = 8, bit counter?
 NXTBIT:
