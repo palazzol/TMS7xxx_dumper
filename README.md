@@ -14,7 +14,7 @@ In addition, it can identify the type of chip (last digit of part number)
 | TMS7020 | TMS7021 | TMS7022 | 2K |
 | TMS7040 | TMS7041 | TMS7042 | 4K |
 | PIC7020 | PIC7021 | PIC7022 | 2K |
-| PIC7040 | PIC7041 | PIC7042 | 2K |
+| PIC7040 | PIC7041 | PIC7042 | 4K |
 
 In addition, at least one commercial IC with a different label is actually one of these internally.
 For example, the CTS256A-AL2, which was sold at Radio Shack, is actually a PIC7041.
