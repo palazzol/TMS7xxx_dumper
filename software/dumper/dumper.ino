@@ -32,6 +32,12 @@ uint16_t g_count;
 // ID Byte
 uint8_t g_ID_byte;
 
+// Chip characteristics
+char g_number[5] = "70XX";
+uint8_t g_ram_bytes = 0;
+uint16_t g_rom_bytes = 0;
+bool g_serial_port = false;
+
 // Start Vector
 uint16_t g_start_vector;
 
@@ -40,8 +46,8 @@ SRecWriter g_writer;
 
 // State variable
 enum {
-  STATE_WAITING,
   STATE_GETTING_ID,
+  STATE_WAITING,
   STATE_DUMPING,
   STATE_WAITING2,
 } g_state;
@@ -86,18 +92,162 @@ void setup() {
     ; // wait for serial port to connect. Needed for native USB port only
   }
 
-  goToWaitingState();
+  goToGettingIDState();
 }
 
 void printHeader()
 {
   Serial.println();
-  Serial.println("PIC70XX / TMS70XX Dumper - v1.1");
-  Serial.println("Dump will be of region 0xF000-0xFFFF (4K), in Motorola S-Record Format.");
-  Serial.println("LED will light when dump is complete.");
-  Serial.println("After dump, send a character or press button on PCB again to see chip ID");
+  Serial.println("S*  Software: PIC70XX / TMS70XX Dumper - v1.2");
+  Serial.print(  "S*    ChipId: TMS/PIC");
+  Serial.println(g_number);
   Serial.println();
-  Serial.println("Send a character, or press button on PCB to begin dump...");
+  Serial.print(g_rom_bytes);
+  Serial.println(" bytes ROM");
+  Serial.print(g_ram_bytes);
+  Serial.println(" bytes RAM");
+  if (g_serial_port)
+    Serial.println("Serial Port");
+  Serial.println();
+
+  if (g_rom_bytes > 0)
+  {
+    if (g_rom_bytes == 2048)
+      Serial.println("Dump will be of region 0xF800-0xFFFF (2K), in Motorola S-Record Format.");
+    else // g_rom_bytes == 4096
+      Serial.println("Dump will be of region 0xF000-0xFFFF (4K), in Motorola S-Record Format.");
+    Serial.println("LED will light when dump is complete.");
+    Serial.println();
+    Serial.println("Send a character, or press button on PCB to begin dump...");
+  }
+  else
+  {
+    Serial.println("No Internal ROM to dump.");
+    Serial.println();
+    Serial.println("Send a character, or press button on PCB to restart identification...");
+  }
+}
+
+void goToGettingIDState()
+{
+  // Clear keyboard buffer
+  while (Serial.available())
+    Serial.read();
+
+  // wait for key release
+  while (digitalRead(PIN_BUTTON) == LOW);
+
+  // Reset pin high
+  digitalWrite(PIN_nRESET, HIGH);
+
+  g_count = 0;
+  g_ID_byte = 0;
+  g_state = STATE_GETTING_ID;
+}
+
+void gettingIDStateLogic()
+{
+  // Clock pulse
+  clockPulse();
+
+  // If no byte, clock some more
+  if (!(SPSR & _BV(SPIF)))
+    return;
+
+  // Grab the data byte
+  g_ID_byte = SPDR;
+
+  if (g_ID_byte <= 0x0b)
+  {
+    switch(g_ID_byte) {
+      case 0x00:
+        g_number[2] = '0';
+        g_number[3] = '0';
+        g_ram_bytes = 128;
+        g_rom_bytes = 0;
+        g_serial_port = false;
+      break;
+      case 0x01:
+        g_number[2] = '0';
+        g_number[3] = '1';
+        g_ram_bytes = 128;
+        g_rom_bytes = 0;
+        g_serial_port = true;
+      break;
+      case 0x02:
+        g_number[2] = '0';
+        g_number[3] = '?';
+        g_ram_bytes = 256;
+        g_rom_bytes = 0;
+        g_serial_port = false;
+      break;
+      case 0x03:
+        g_number[2] = '0';
+        g_number[3] = '2';
+        g_ram_bytes = 256;
+        g_rom_bytes = 0;
+        g_serial_port = true;
+      break;
+      case 0x04:
+        g_number[2] = '2';
+        g_number[3] = '0';
+        g_ram_bytes = 128;
+        g_rom_bytes = 2048;
+        g_serial_port = false;
+      break;
+      case 0x05:
+        g_number[2] = '2';
+        g_number[3] = '1';
+        g_ram_bytes = 128;
+        g_rom_bytes = 2048;
+        g_serial_port = true;
+      break;
+      case 0x06:
+        g_number[2] = '2';
+        g_number[3] = '?';
+        g_ram_bytes = 256;
+        g_rom_bytes = 2048;
+        g_serial_port = false;
+      break;
+      case 0x07:
+        g_number[2] = '2';
+        g_number[3] = '2';
+        g_ram_bytes = 256;
+        g_rom_bytes = 2048;
+        g_serial_port = true;
+      break;
+      case 0x08:
+        g_number[2] = '4';
+        g_number[3] = '0';
+        g_ram_bytes = 128;
+        g_rom_bytes = 4096;
+        g_serial_port = false;
+      break;
+      case 0x09:
+        g_number[2] = '4';
+        g_number[3] = '1';
+        g_ram_bytes = 128;
+        g_rom_bytes = 4096;
+        g_serial_port = true;
+      break;
+      case 0x0a:
+        g_number[2] = '4';
+        g_number[3] = '?';
+        g_ram_bytes = 256;
+        g_rom_bytes = 4096;
+        g_serial_port = false;
+      break;
+      case 0x0b:
+        g_number[2] = '4';
+        g_number[3] = '2';
+        g_ram_bytes = 256;
+        g_rom_bytes = 4096;
+        g_serial_port = true;
+      break;
+    }
+  }
+
+  goToWaitingState();
 }
 
 void goToWaitingState()
@@ -119,41 +269,13 @@ void goToWaitingState()
   while (Serial.available())
     Serial.read();
 
+  // wait for key release
+  while (digitalRead(PIN_BUTTON) == LOW);
+
   g_writer.reset();
   g_writer.setSerial(Serial);
   g_count = 0;
   g_state = STATE_WAITING;
-}
-
-void goToGettingIDState()
-{
-  // Reset pin high
-  digitalWrite(PIN_nRESET, HIGH);
-
-  g_count = 0;
-  g_ID_byte = 0;
-  g_state = STATE_GETTING_ID;
-}
-
-void goToDumpingState()
-{
-  // Reset pin high
-  digitalWrite(PIN_nRESET, HIGH);
-
-  g_count = 0;
-  g_state = STATE_DUMPING;
-}
-
-void goToWaiting2State()
-{
-  // Clear keyboard buffer
-  while (Serial.available())
-    Serial.read();
-
-  // wait for key release
-  while (digitalRead(PIN_BUTTON) == LOW);
-
-  g_state = STATE_WAITING2;
 }
 
 void waitingStateLogic()
@@ -167,30 +289,30 @@ void waitingStateLogic()
 
   // If button pushed
   if (digitalRead(PIN_BUTTON) == LOW)
-    goToGettingIDState();
+    if (g_rom_bytes == 0)
+      goToGettingIDState();
+    else
+      goToDumpingState();
 
   // if key hit
   if (Serial.available())
   {
     uint8_t c = Serial.read();
-    goToGettingIDState();
+    if (g_rom_bytes == 0)
+      goToGettingIDState();
+    else
+      goToDumpingState();
   }
 
 }
 
-void gettingIDStateLogic()
+void goToDumpingState()
 {
-  // Clock pulse
-  clockPulse();
+  // Reset pin high
+  digitalWrite(PIN_nRESET, HIGH);
 
-  // If no byte, clock some more
-  if (!(SPSR & _BV(SPIF)))
-    return;
-
-  // Grab the data byte
-  g_ID_byte = SPDR;
-
-  goToDumpingState();
+  g_count = 0;
+  g_state = STATE_DUMPING;
 }
 
 void dumpingStateLogic()
@@ -205,18 +327,19 @@ void dumpingStateLogic()
   // Grab the data byte
   volatile uint8_t x = SPDR;
 
-  // Grab the start vector when it comes through
-  if (g_count == 0x0ffe)
-    g_start_vector = ((uint16_t)(x)) << 8;
-  if (g_count == 0x0fff)
-    g_start_vector |= x;
+  if (g_count == 0)
+  {
+    // This is just the id again, ignore it
+    g_count++;
+    return;
+  }
 
-  // Dump out in S19 format, until we have 4K
-  if (g_count < 0x1000)
+  // Dump out in S19 format, until we have the full dump
+  if (g_count < g_rom_bytes+1)
   {
     g_writer.addData(x);
     g_count++;
-    if (g_count == 0x1000)
+    if (g_count == g_rom_bytes+1)
     {
       g_writer.finish();
       // LED on
@@ -226,39 +349,22 @@ void dumpingStateLogic()
   }
 }
 
-void printID()
+void goToWaiting2State()
+{
+  // Clear keyboard buffer
+  while (Serial.available())
+    Serial.read();
+
+  // wait for key release
+  while (digitalRead(PIN_BUTTON) == LOW);
+
+  g_state = STATE_WAITING2;
+}
+
+void printDone()
 {
   Serial.println();
-  switch (g_ID_byte)
-  {
-    case 0x00:
-      Serial.println("Chip Identified as TMS/PIC7XX0 - 128 bytes RAM, No Serial Port");
-    break;
-    case 0x01:
-      Serial.println("Chip Identified as TMS/PIC7XX1 - 128 bytes RAM, Serial Port");
-    break;
-    case 0x02:
-      Serial.println("Chip Identified as TMS/PIC7XX? - 256 bytes RAM, No Serial Port??");
-    break;
-    case 0x03:
-      Serial.println("Chip Identified as TMS/PIC7XX2 - 256 bytes RAM, Serial Port");
-    break;
-    case 0x80:
-      Serial.println("Chip Identified as TMS/PIC7XX? - RAM Check failed, No Serial Port");
-    break;
-    case 0x81:
-      Serial.println("Chip Identified as TMS/PIC7XX? - RAM Check failed, Serial Port");
-    break;
-    default:
-      Serial.print("Chip Identification error - Chip returned: 0x");
-      Serial.println(g_ID_byte, HEX);
-    break;
-  }
-  Serial.print("Chip Start Vector = 0x");
-  Serial.println(g_start_vector,HEX);
-  Serial.println();
-  Serial.println("Send a character, or press button on PCB to see ID info again,");
-  Serial.println("or hit RESET button on Arduino Nano to restart dumper...");
+  Serial.println("Dump Complete.  Restarting...");
 }
 
 void waiting2StateLogic()
@@ -266,16 +372,16 @@ void waiting2StateLogic()
   // If button pushed
   if (digitalRead(PIN_BUTTON) == LOW)
   {
-    printID();
-    goToWaiting2State();
+    printDone();
+    goToGettingIDState();
   }
 
   // if key hit
   if (Serial.available())
   {
     uint8_t c = Serial.read();
-    printID();
-    goToWaiting2State();
+    printDone();
+    goToGettingIDState();
   }
 }
 
