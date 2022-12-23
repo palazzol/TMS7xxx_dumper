@@ -1,5 +1,5 @@
 
-// PIC70XX / TMS70XX Dumper
+// TMS70xx Dumper
 //
 // Connections:
 
@@ -34,10 +34,11 @@ uint16_t g_count;
 uint8_t g_ID_byte;
 
 // Chip characteristics
-char g_number[5] = "70XX";
+String g_number = "Unknown";
 uint16_t g_ram_bytes = 0;
 uint16_t g_rom_bytes = 0;
 bool g_serial_port = false;
+bool g_cmos = false;
 
 // Start Vector
 uint16_t g_start_vector;
@@ -99,19 +100,31 @@ void setup() {
 
 void printHeader()
 {
+
+  processIDByte();
+
   // Print sequence of parameters
   Serial.println();
   Serial.print(char(0x01));
-  Serial.println("    Software: PIC70XX / TMS70XX Dumper - v1.2");
+  Serial.println("    Software: TMS7xxx Dumper - v1.3");
 
   Serial.print(char(0x01));
-  Serial.print(  "      ChipID: TMS-PIC");
-  Serial.print(g_number[0]);
-  Serial.print(g_number[1]);
-  if (analogRead(PIN_ANALOG) > 939)
-    Serial.print('C');
-  Serial.print(g_number[2]);
-  Serial.println(g_number[3]);
+  if(g_number[0] == 'U')  //Unknown
+  {
+    if(g_cmos)
+    {
+      Serial.println(  "  DetectedID: Unknown_TMS7xCxx");
+    }
+    else
+    {
+      Serial.println(  "  DetectedID: Unknown_TMS7xxx");
+    }    
+  }
+  else
+  {
+    Serial.print(  "  DetectedID: TMS");
+    Serial.println(g_number);
+  }
 
   Serial.print(char(0x01));
   Serial.print(  "     RomSize: ");
@@ -121,9 +134,24 @@ void printHeader()
   Serial.print(  "     RamSize: ");
   Serial.println(g_ram_bytes);
 
+  Serial.print(char(0x01));
+  Serial.print(  "     Process: ");
+  if(g_cmos)
+  {
+    Serial.println("CMOS");
+  }
+  else
+  {
+    Serial.println("NMOS");
+  }
+
   Serial.println();
   if (g_serial_port)
     Serial.println("Serial Port Detected");
+  if (g_ID_byte == 0xb || g_ID_byte == 0x13)
+    Serial.println("Note: Could be TMS77xx if part has a UV window (possibly under a sticker)");
+
+
   Serial.println();
 
   //Serial.print("ID Byte: 0x");
@@ -132,10 +160,16 @@ void printHeader()
   
   if (g_rom_bytes > 0)
   {
-    if (g_rom_bytes == 2048)
+    if (g_rom_bytes == 0x0800)
       Serial.println("Dump will be of region 0xF800-0xFFFF (2K), in Motorola S-Record Format.");
-    else // g_rom_bytes == 4096
+    if (g_rom_bytes == 0x1000)
       Serial.println("Dump will be of region 0xF000-0xFFFF (4K), in Motorola S-Record Format.");
+    if (g_rom_bytes == 0x2000)
+    {
+      Serial.println("Dump will be of region 0xE000-0xFFFF (8K), in Motorola S-Record Format.");
+    }
+    if (g_rom_bytes == 0x3000)
+      Serial.println("Dump will be of region 0xD000-0xFFFF (12K), in Motorola S-Record Format.");
     Serial.println("LED will light when dump is complete.");
     Serial.println();
     Serial.println("Hit a key, or press button on PCB to begin dump...");
@@ -165,6 +199,167 @@ void goToGettingIDState()
   g_state = STATE_GETTING_ID;
 }
 
+void processIDByte()
+{
+  Serial.println(analogRead(PIN_ANALOG));
+  //Do not touch the board when detecting process, it can erroneously read as CMOS
+  if (analogRead(PIN_ANALOG) > 880) //determined with exactly 2 chips on this platform (arduino nano)
+    g_cmos = true;
+
+  switch(g_ID_byte) {
+    case 0x00:
+      if (g_cmos)
+        g_number = "70C00";
+      else
+        g_number = "7000";
+      g_ram_bytes = 0x80;
+      g_rom_bytes = 0;
+      g_serial_port = false;
+    break;
+    case 0x01:
+      if (g_cmos)
+        g_number = "70C01";
+      else
+        g_number = "7001";
+      g_ram_bytes = 0x80;
+      g_rom_bytes = 0;
+      g_serial_port = true;
+    break;
+    case 0x02:
+      g_ram_bytes = 0x100;
+      g_rom_bytes = 0;
+      g_serial_port = false;
+    break;
+    case 0x03:
+      if (g_cmos)
+        g_number = "70C02";
+      else
+        g_number = "7002";
+      g_ram_bytes = 0x100;
+      g_rom_bytes = 0;
+      g_serial_port = true;
+    break;
+    case 0x04:
+      if (g_cmos)
+        g_number = "70C20";
+      else
+        g_number = "7020";
+      g_ram_bytes = 0x80;
+      g_rom_bytes = 0x0800;
+      g_serial_port = false;
+    break;
+    case 0x05:
+      if (g_cmos)
+        g_number = "70C21";
+      else
+        g_number = "7021";
+      g_ram_bytes = 0x80;
+      g_rom_bytes = 0x0800;
+      g_serial_port = true;
+    break;
+    case 0x06:
+      g_ram_bytes = 0x100;
+      g_rom_bytes = 0x0800;
+      g_serial_port = false;
+    break;
+    case 0x07:
+      if (g_cmos)
+        g_number = "70C22";
+      else
+        g_number = "7022";
+      g_ram_bytes = 0x100;
+      g_rom_bytes = 0x0800;
+      g_serial_port = true;
+    break;
+    case 0x08:
+      if (g_cmos)
+        g_number = "70C40";
+      else
+        g_number = "7040";
+      g_ram_bytes = 0x80;
+      g_rom_bytes = 0x1000;
+      g_serial_port = false;
+    break;
+    case 0x09:
+      if (g_cmos)
+        g_number = "70C41";
+      else
+        g_number = "7041";
+      g_ram_bytes = 0x80;
+      g_rom_bytes = 0x1000;
+      g_serial_port = true;
+    break;
+    case 0x0a:
+      g_ram_bytes = 0x100;
+      g_rom_bytes = 0x1000;
+      g_serial_port = false;
+    break;
+    case 0x0b:
+      if (g_cmos)
+        g_number = "70C42"; //could be a 77C42 if it has a UV window
+      else
+        g_number = "7042"; //could be a 7742 if it has a UV window
+      g_ram_bytes = 0x100;
+      g_rom_bytes = 0x1000;
+      g_serial_port = true;
+    break;
+    case 0x10:
+      if (g_cmos)
+      {
+        g_number = "70C80";
+        g_rom_bytes = 0x2000;
+      }
+      else
+      {
+        g_number = "70120";
+        g_rom_bytes = 0x3000;
+      }        
+      g_ram_bytes = 0x80;
+      g_serial_port = false;
+    break;
+    case 0x11:
+      if (g_cmos)
+      {
+        g_number = "70C81";
+        g_rom_bytes = 0x2000;
+      }
+      else
+      {
+        g_number = "70121";
+        g_rom_bytes = 0x3000;
+      }        
+      g_ram_bytes = 0x80;
+      g_serial_port = true;
+    break;
+    case 0x12:
+      if (g_cmos)
+      {
+        g_rom_bytes = 0x2000;
+      }
+      else
+      {
+        g_rom_bytes = 0x3000;
+      }        
+      g_ram_bytes = 0x100;
+      g_serial_port = false;
+    break;
+    case 0x13:
+      if (g_cmos)
+      {
+        g_number = "70C82"; //could be a 77C82 if it has a UV window
+        g_rom_bytes = 0x2000;
+      }
+      else
+      {
+        g_number = "70122";
+        g_rom_bytes = 0x3000;
+      }        
+      g_ram_bytes = 0x80;
+      g_serial_port = true;
+    break;
+  }
+}
+
 void gettingIDStateLogic()
 {
   // Clock pulse
@@ -176,96 +371,6 @@ void gettingIDStateLogic()
 
   // Grab the data byte
   g_ID_byte = SPDR;
-
-  if (g_ID_byte <= 0x0b)
-  {
-    switch(g_ID_byte) {
-      case 0x00:
-        g_number[2] = '0';
-        g_number[3] = '0';
-        g_ram_bytes = 128;
-        g_rom_bytes = 0;
-        g_serial_port = false;
-      break;
-      case 0x01:
-        g_number[2] = '0';
-        g_number[3] = '1';
-        g_ram_bytes = 128;
-        g_rom_bytes = 0;
-        g_serial_port = true;
-      break;
-      case 0x02:
-        g_number[2] = '0';
-        g_number[3] = '?';
-        g_ram_bytes = 256;
-        g_rom_bytes = 0;
-        g_serial_port = false;
-      break;
-      case 0x03:
-        g_number[2] = '0';
-        g_number[3] = '2';
-        g_ram_bytes = 256;
-        g_rom_bytes = 0;
-        g_serial_port = true;
-      break;
-      case 0x04:
-        g_number[2] = '2';
-        g_number[3] = '0';
-        g_ram_bytes = 128;
-        g_rom_bytes = 2048;
-        g_serial_port = false;
-      break;
-      case 0x05:
-        g_number[2] = '2';
-        g_number[3] = '1';
-        g_ram_bytes = 128;
-        g_rom_bytes = 2048;
-        g_serial_port = true;
-      break;
-      case 0x06:
-        g_number[2] = '2';
-        g_number[3] = '?';
-        g_ram_bytes = 256;
-        g_rom_bytes = 2048;
-        g_serial_port = false;
-      break;
-      case 0x07:
-        g_number[2] = '2';
-        g_number[3] = '2';
-        g_ram_bytes = 256;
-        g_rom_bytes = 2048;
-        g_serial_port = true;
-      break;
-      case 0x08:
-        g_number[2] = '4';
-        g_number[3] = '0';
-        g_ram_bytes = 128;
-        g_rom_bytes = 4096;
-        g_serial_port = false;
-      break;
-      case 0x09:
-        g_number[2] = '4';
-        g_number[3] = '1';
-        g_ram_bytes = 128;
-        g_rom_bytes = 4096;
-        g_serial_port = true;
-      break;
-      case 0x0a:
-        g_number[2] = '4';
-        g_number[3] = '?';
-        g_ram_bytes = 256;
-        g_rom_bytes = 4096;
-        g_serial_port = false;
-      break;
-      case 0x0b:
-        g_number[2] = '4';
-        g_number[3] = '2';
-        g_ram_bytes = 256;
-        g_rom_bytes = 4096;
-        g_serial_port = true;
-      break;
-    }
-  }
 
   goToWaitingState();
 }
@@ -281,6 +386,7 @@ void goToWaitingState()
   for(int i=0; i<100; i++) {
     clockPulse();
   }
+
 
   // Print header
   printHeader();
@@ -355,16 +461,47 @@ void dumpingStateLogic()
   }
 
   // Dump out in S19 format, until we have the full dump
-  if (g_count < g_rom_bytes+1)
+  if (g_rom_bytes == 0x2000)
   {
-    g_writer.addData(x);
-    g_count++;
-    if (g_count == g_rom_bytes+1)
+    if (g_count < g_rom_bytes + 0x1001)//(special case where the tms7000 dumps 12k and we only care about the last 8k)
     {
-      g_writer.finish();
-      // LED on
-      digitalWrite(PIN_LED, HIGH);
-      goToWaiting2State();
+      if( g_count > 0x1000 )      
+        g_writer.addData(x);
+      else
+      {
+        if(g_count%32 == 0)
+        {
+          Serial.print(".");//so we look like we're doing something for 4k of read
+          if(g_count%2048 == 0)
+          {
+            Serial.println();          
+          }
+        }
+      }       
+
+      g_count++;
+      if (g_count == g_rom_bytes + 0x1001)
+      {
+        g_writer.finish();
+        // LED on
+        digitalWrite(PIN_LED, HIGH);
+        goToWaiting2State();
+      }
+    }
+  }
+  else
+  {
+    if (g_count < g_rom_bytes+1)
+    {
+      g_writer.addData(x);
+      g_count++;
+      if (g_count == g_rom_bytes+1)
+      {
+        g_writer.finish();
+        // LED on
+        digitalWrite(PIN_LED, HIGH);
+        goToWaiting2State();
+      }
     }
   }
 }
