@@ -79,7 +79,8 @@ R7      .equ    7
 
 IOCNT0  .equ    0   ; Used to control modes via the CPU
 BPORT   .equ    6   ; Used to switch modes via external connection, and used for SPI interface 
-SCTL1   .equ    21  ; Used to probe for a Serial Port
+SCTL1   .equ    21  ; Used to probe for a Serial Port on the 70x2
+SCTL1C  .equ    24  ; Used to probe for a Serial Port on the 70Cx2
 
 RAMDEST .equ    $0008       ; location in ram for the code to be copied into and run from
                             ; Right now, this just barely fits into 128 bytes of RAM
@@ -128,18 +129,36 @@ RAM128:
 
         ; Try to store bottom two bits of SCTL1 register and see if they stay
         ; if so, we have a UART
+        ; We try both the locations, once for the 70X2 chip, and then the 70CX2 chip
+        
 SERCHK:
         ANDP    %$FC,SCTL1  ; zero the 2 LS bits
         MOVP    SCTL1,A
         AND     %$03,A
-        JNZ     SERFAIL     ; fail if not zero
+        JNZ     SERCHKC     ; fail if not zero
         ORP     %$01,SCTL1  ; set the bottom bit
         MOVP    SCTL1,A
         AND     %$03,A 
         CMP     %$01,A      ; check if it's a one now
-        JNZ     SERFAIL     ; or fail
+        JNZ     SERCHKC     ; or fail
         ORP     %$02,SCTL1  ; set the next bit
         MOVP    SCTL1,A
+        AND     %$03,A 
+        CMP     %$03,A      ; should be 3 now
+        JZ      SERFOUND    ; if not fail
+
+SERCHKC:
+        ANDP    %$FC,SCTL1C  ; zero the 2 LS bits
+        MOVP    SCTL1C,A
+        AND     %$03,A
+        JNZ     SERFAIL     ; fail if not zero
+        ORP     %$01,SCTL1C  ; set the bottom bit
+        MOVP    SCTL1C,A
+        AND     %$03,A 
+        CMP     %$01,A      ; check if it's a one now
+        JNZ     SERFAIL     ; or fail
+        ORP     %$02,SCTL1C  ; set the next bit
+        MOVP    SCTL1C,A
         AND     %$03,A 
         CMP     %$03,A      ; should be 3 now
         JNZ     SERFAIL     ; if not fail
