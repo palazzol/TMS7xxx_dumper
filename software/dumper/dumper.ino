@@ -97,17 +97,26 @@ void setup() {
 
 void printHeader()
 {
+  // Print sequence of parameters
   Serial.println();
-  Serial.println("S*  Software: PIC70XX / TMS70XX Dumper - v1.2");
-  Serial.print(  "S*    ChipId: TMS/PIC");
+  Serial.print(char(0x01));
+  Serial.println("    Software: PIC70XX / TMS70XX Dumper - v1.2");
+
+  Serial.print(char(0x01));
+  Serial.print(  "      ChipID: TMS-PIC");
   Serial.println(g_number);
+
+  Serial.print(char(0x01));
+  Serial.print(  "     RomSize: ");
+  Serial.println(g_rom_bytes);
+
+  Serial.print(char(0x01));
+  Serial.print(  "     RamSize: ");
+  Serial.println(g_ram_bytes);
+
   Serial.println();
-  Serial.print(g_rom_bytes);
-  Serial.println(" bytes ROM");
-  Serial.print(g_ram_bytes);
-  Serial.println(" bytes RAM");
   if (g_serial_port)
-    Serial.println("Serial Port");
+    Serial.println("Serial Port Detected");
   Serial.println();
 
   if (g_rom_bytes > 0)
@@ -118,13 +127,13 @@ void printHeader()
       Serial.println("Dump will be of region 0xF000-0xFFFF (4K), in Motorola S-Record Format.");
     Serial.println("LED will light when dump is complete.");
     Serial.println();
-    Serial.println("Send a character, or press button on PCB to begin dump...");
+    Serial.println("Hit a key, or press button on PCB to begin dump...");
   }
   else
   {
     Serial.println("No Internal ROM to dump.");
     Serial.println();
-    Serial.println("Send a character, or press button on PCB to restart identification...");
+    Serial.println("Hit a key, or press button on PCB to restart identification...");
   }
 }
 
