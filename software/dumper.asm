@@ -48,18 +48,22 @@
 ; 0x7F      - used to determine RAM size
 
 ; ID Byte -
-;     0x00 - 0b00000000 - 128 bytes of ram, 0K ROM               - TMS/PIC7000
-;     0x01 - 0b00000001 - 128 bytes of ram, serial port, 0K ROM  - TMS/PIC7001
-;     0x02 - 0b00000010 - 256 bytes of ram, 0K ROM               - TMS/PIC700?
-;     0x03 - 0b00000011 - 256 bytes of ram, serial port, 0K ROM  - TMS/PIC7002
-;     0x04 - 0b00000100 - 128 bytes of ram, 2K ROM               - TMS/PIC7020
-;     0x05 - 0b00000101 - 128 bytes of ram, serial port, 2K ROM  - TMS/PIC7021
-;     0x06 - 0b00000110 - 256 bytes of ram, 0K ROM               - TMS/PIC702?
-;     0x07 - 0b00000111 - 256 bytes of ram, serial port, 2K ROM  - TMS/PIC7022
-;     0x08 - 0b00001000 - 128 bytes of ram, 4K ROM               - TMS/PIC7040
-;     0x09 - 0b00001001 - 128 bytes of ram, serial port, 4K ROM  - TMS/PIC7041
-;     0x0a - 0b00001010 - 256 bytes of ram, 4K ROM               - TMS/PIC704?
-;     0x0b - 0b00001011 - 256 bytes of ram, serial port, 4K ROM  - TMS/PIC7042
+;     0x00 - 0b00000000 - 128 bytes of ram, 0K ROM                - TMS/PIC7000
+;     0x01 - 0b00000001 - 128 bytes of ram, serial port, 0K ROM   - TMS/PIC7001
+;     0x02 - 0b00000010 - 256 bytes of ram, 0K ROM                - TMS/PIC700?
+;     0x03 - 0b00000011 - 256 bytes of ram, serial port, 0K ROM   - TMS/PIC7002
+;     0x04 - 0b00000100 - 128 bytes of ram, 2K ROM                - TMS/PIC7020
+;     0x05 - 0b00000101 - 128 bytes of ram, serial port, 2K ROM   - TMS/PIC7021
+;     0x06 - 0b00000110 - 256 bytes of ram, 0K ROM                - TMS/PIC702?
+;     0x07 - 0b00000111 - 256 bytes of ram, serial port, 2K ROM   - TMS/PIC7022
+;     0x08 - 0b00001000 - 128 bytes of ram, 4K ROM                - TMS/PIC7040
+;     0x09 - 0b00001001 - 128 bytes of ram, serial port, 4K ROM   - TMS/PIC7041
+;     0x0a - 0b00001010 - 256 bytes of ram, 4K ROM                - TMS/PIC704?
+;     0x0b - 0b00001011 - 256 bytes of ram, serial port, 12K ROM  - TMS/PIC7042
+;     0x10 - 0b00010000 - 128 bytes of ram, 12K ROM               - TMS/PIC70120
+;     0x11 - 0b00010001 - 128 bytes of ram, serial port, 12K ROM  - TMS/PIC70121
+;     0x12 - 0b00010010 - 256 bytes of ram, 12K ROM               - TMS/PIC7012?
+;     0x13 - 0b00010011 - 256 bytes of ram, serial port, 12K ROM  - TMS/PIC70122
 ;     Any other values are errors
 
 ;R0      .equ    0   ; AKA A Register
@@ -79,6 +83,12 @@ SCTL1   .equ    21  ; Used to probe for a Serial Port
 
 RAMDEST .equ    $0008       ; location in ram for the code to be copied into and run from
                             ; Right now, this just barely fits into 128 bytes of RAM
+
+        .ORG    $E000       ; External Memory in the last 8K
+        .FILL   $20,$E0     ; If this data is read in Full Expansion mode, then this is not a 12K internal ROM chip
+
+        .ORG    $E800       ; External Memory in the last 6K
+        .FILL   $20,$E8     ; If this data is read in Full Expansion mode, then this is not a 12K internal ROM chip
 
         .ORG    $F000       ; External Memory in the last 4K
         .FILL   $20,$F0     ; If this data is read in Full Expansion mode, then this is not a 4K internal ROM chip
@@ -100,26 +110,21 @@ RAMCHK:
         ; do checks twice with different data,
         ; to protect against random luck matches
 
-        MOV     %$AA,$ff
-        MOV     %$55,$7f
-        CMP     %$55,$7f    ; check for 128 bytes working
-        JNZ     RAMFAIL
-        CMP     %$AA,$ff    ; check for 256 bytes working
-        JNZ     RAM128
         MOV     %$55,$ff
         MOV     %$AA,$7f
-        CMP     %$AA,$7f
-        JNZ     RAMFAIL     ; check for 128 bytes working
         CMP     %$55,$ff    ; check for 256 bytes working
-        JZ      RAM256
-RAM128:
-        MOV     %$00,R3     ; 128 bytes
-        JMP     SERCHK
+        JNZ     RAM128
+        MOV     %$AA,$ff
+        MOV     %$55,$7f
+        CMP     %$AA,$ff    ; doublecheck for 256 bytes working
+        JNZ     RAM128
+
 RAM256:
         MOV     %$02,R3     ; 256 bytes
         JMP     SERCHK
-RAMFAIL:
-        MOV     %$80,R3     ; error in ram check
+RAM128:
+        MOV     %$00,R3     ; 128 bytes
+        JMP     SERCHK
 
         ; Try to store bottom two bits of SCTL1 register and see if they stay
         ; if so, we have a UART
@@ -173,36 +178,47 @@ DELAY:
         JNZ     DELAY       ; wait a bit for things to settle
 
 ;   determine internal ROM size
-        MOVD    %$F000,R5   ; Start of 4K ROM
-        MOV     %$F0,B      ; expected byte in B if reading external memory
-L1:     LDA     *R5
-        CMP     B,A         
-        JNZ     ROM4K
-        INC     R5
-        CMP     %$20,R5
-        JNZ     L1
 
-        MOVD    %$F800,R5   ; Start of 2K ROM
-        MOV     %$F8,B      ; expected byte in B if reading external memory
-L2:     LDA     *R5
-        CMP     B,A
-        JNZ     ROM2K
+        MOVD    %$E800,R5   ; Start of 6K ROM
+X1:     LDA     *R5
+        CMP     R4,A        ; expected byte in R4 if reading external memory
+        JNZ     NOMATCH
         INC     R5
-        CMP     %$20,R5
-        JNZ     L2
+        CMP     %$20,R5     ; done checking 32 bytes?
+        JNZ     X1
+        MOV     %$0,R5      ; if so, start next region, + 0x0800
+        ADD     %$8,R4
+        JNZ     X1          ; done with all regions?
 
 ROM0K:
-        MOVD    %$FFFF,R5   ; R5 = 0000-1, (End of Internal ROM)
+        JMP     FINISHUP
+
+NOMATCH:
+        CMP     %$E8,R4     ; 12K ROM check if match
+        JNZ     NEXTCHK
+
+ROM12K:
+        OR      %$10,R3
+        MOV     %$CF,R4     ; R4:R5 = D000-1, (Start of 12K Internal ROM)
         JMP     DODUMP
 
-ROM2K:  MOVD    %$F7FF,R5   ; R5 = F800-1, (Start of 2K Internal ROM)
+NEXTCHK:
+        CMP     %$F0,R4     ; 4K ROM if match
+        JNZ     ROM2K
+
+ROM4K:  OR      %$08,R3
+        JMP     FINISHUP
+                            
+ROM2K:  
         OR      %$04,R3
-        JMP     DODUMP
-
-ROM4K:  MOVD    %$EFFF,R5   ; R5 = F000-1, (Start of 4K Internal ROM)
-        OR      %$08,R3
-
+FINISHUP:
+        DEC     R4          ;    R4:R5 = 0000-1, (End of Internal ROM)
+                            ; or R4:R5 = F000-1, (Start of 4K Internal ROM)
+                            ; or R4:R5 = F800-1, (Start of 2K Internal ROM)
+        
 DODUMP:
+        MOV     %$FF,R5
+
         ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
         ANDP    %$F7,BPORT  ; PORTB.3 = ~SS = 0
         MOV     R3,A
