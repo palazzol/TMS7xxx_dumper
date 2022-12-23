@@ -8,12 +8,7 @@
 ; This code can be built with TASM Version 3.2:
 ;   tasm -70 -g3 -fff -s -c dumper.asm dumper.bin
 ;
-; Dumper code for:
-;       PIC7020, TMS7020 - 2K bytes ROM, 128 bytes RAM
-;       PIC7021, TMS7021 - 2K bytes ROM, 128 bytes RAM, peripherals
-;       PIC7040, TMS7040 - 4K bytes ROM, 128 bytes RAM
-;       PIC7041, TMS7041 - 4K bytes ROM, 128 bytes RAM, peripherals
-;       PIC7042, TMS7042 - 4K bytes ROM, 256 bytes RAM, peripherals
+; Dumper code for PIC70XX, TMS70XX, TMS70XXX, TMS77XX, TMS70CXX, and TMS77CXX chips
 ;
 ; Hardware connections:
 ;
@@ -48,22 +43,22 @@
 ; 0x7F      - used to determine RAM size
 
 ; ID Byte -
-;     0x00 - 0b00000000 - 128 bytes of ram, 0K ROM                - TMS/PIC7000
-;     0x01 - 0b00000001 - 128 bytes of ram, serial port, 0K ROM   - TMS/PIC7001
-;     0x02 - 0b00000010 - 256 bytes of ram, 0K ROM                - TMS/PIC700?
-;     0x03 - 0b00000011 - 256 bytes of ram, serial port, 0K ROM   - TMS/PIC7002
-;     0x04 - 0b00000100 - 128 bytes of ram, 2K ROM                - TMS/PIC7020
-;     0x05 - 0b00000101 - 128 bytes of ram, serial port, 2K ROM   - TMS/PIC7021
-;     0x06 - 0b00000110 - 256 bytes of ram, 0K ROM                - TMS/PIC702?
-;     0x07 - 0b00000111 - 256 bytes of ram, serial port, 2K ROM   - TMS/PIC7022
-;     0x08 - 0b00001000 - 128 bytes of ram, 4K ROM                - TMS/PIC7040
-;     0x09 - 0b00001001 - 128 bytes of ram, serial port, 4K ROM   - TMS/PIC7041
-;     0x0a - 0b00001010 - 256 bytes of ram, 4K ROM                - TMS/PIC704?
-;     0x0b - 0b00001011 - 256 bytes of ram, serial port, 12K ROM  - TMS/PIC7042
-;     0x10 - 0b00010000 - 128 bytes of ram, 12K ROM               - TMS/PIC70120
-;     0x11 - 0b00010001 - 128 bytes of ram, serial port, 12K ROM  - TMS/PIC70121
-;     0x12 - 0b00010010 - 256 bytes of ram, 12K ROM               - TMS/PIC7012?
-;     0x13 - 0b00010011 - 256 bytes of ram, serial port, 12K ROM  - TMS/PIC70122
+;     0x00 - 0b00000000 - 128 bytes of ram, 0K ROM
+;     0x01 - 0b00000001 - 128 bytes of ram, serial port, 0K ROM
+;     0x02 - 0b00000010 - 256 bytes of ram, 0K ROM
+;     0x03 - 0b00000011 - 256 bytes of ram, serial port, 0K ROM
+;     0x04 - 0b00000100 - 128 bytes of ram, 2K ROM
+;     0x05 - 0b00000101 - 128 bytes of ram, serial port, 2K ROM
+;     0x06 - 0b00000110 - 256 bytes of ram, 0K ROM
+;     0x07 - 0b00000111 - 256 bytes of ram, serial port, 2K ROM
+;     0x08 - 0b00001000 - 128 bytes of ram, 4K ROM
+;     0x09 - 0b00001001 - 128 bytes of ram, serial port, 4K ROM
+;     0x0a - 0b00001010 - 256 bytes of ram, 4K ROM
+;     0x0b - 0b00001011 - 256 bytes of ram, serial port, >4K ROM
+;     0x10 - 0b00010000 - 128 bytes of ram, >4K ROM
+;     0x11 - 0b00010001 - 128 bytes of ram, serial port, >4K ROM
+;     0x12 - 0b00010010 - 256 bytes of ram, >4K ROM
+;     0x13 - 0b00010011 - 256 bytes of ram, serial port, >4K ROM
 ;     Any other values are errors
 
 ;R0      .equ    0   ; AKA A Register
@@ -130,7 +125,7 @@ RAM128:
         ; Try to store bottom two bits of SCTL1 register and see if they stay
         ; if so, we have a UART
         ; We try both the locations, once for the 70X2 chip, and then the 70CX2 chip
-        
+
 SERCHK:
         ANDP    %$FC,SCTL1  ; zero the 2 LS bits
         MOVP    SCTL1,A
