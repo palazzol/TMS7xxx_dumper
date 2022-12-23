@@ -17,6 +17,7 @@ constexpr int PIN_SS     = 10;
 constexpr int PIN_MOSI   = 11;
 constexpr int PIN_MISO   = 12;
 constexpr int PIN_SCK    = 13;
+constexpr int PIN_ANALOG = A0;
 
 // UI
 constexpr int PIN_BUTTON = 2;
@@ -34,7 +35,7 @@ uint8_t g_ID_byte;
 
 // Chip characteristics
 char g_number[5] = "70XX";
-uint8_t g_ram_bytes = 0;
+uint16_t g_ram_bytes = 0;
 uint16_t g_rom_bytes = 0;
 bool g_serial_port = false;
 
@@ -73,7 +74,8 @@ void setup() {
   pinMode(PIN_MOSI, INPUT);
   pinMode(PIN_SCK, INPUT);
   pinMode(PIN_MISO, OUTPUT);      // MISO needs to be an output
-  
+  pinMode(PIN_ANALOG, INPUT);
+
   pinMode(PIN_BUTTON, INPUT_PULLUP);
   pinMode(PIN_LED, OUTPUT);
 
@@ -104,7 +106,12 @@ void printHeader()
 
   Serial.print(char(0x01));
   Serial.print(  "      ChipID: TMS-PIC");
-  Serial.println(g_number);
+  Serial.print(g_number[0]);
+  Serial.print(g_number[1]);
+  if (analogRead(PIN_ANALOG) > 939)
+    Serial.print('C');
+  Serial.print(g_number[2]);
+  Serial.println(g_number[3]);
 
   Serial.print(char(0x01));
   Serial.print(  "     RomSize: ");
@@ -119,6 +126,10 @@ void printHeader()
     Serial.println("Serial Port Detected");
   Serial.println();
 
+  //Serial.print("ID Byte: 0x");
+  //Serial.println(g_ID_byte, HEX);
+  //Serial.println();
+  
   if (g_rom_bytes > 0)
   {
     if (g_rom_bytes == 2048)
