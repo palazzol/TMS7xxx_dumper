@@ -54,7 +54,7 @@
 ;     0x08 - 0b00001000 - 128 bytes of ram, 4K ROM
 ;     0x09 - 0b00001001 - 128 bytes of ram, serial port, 4K ROM
 ;     0x0a - 0b00001010 - 256 bytes of ram, 4K ROM
-;     0x0b - 0b00001011 - 256 bytes of ram, serial port, >4K ROM
+;     0x0b - 0b00001011 - 256 bytes of ram, serial port, 4K ROM
 ;     0x10 - 0b00010000 - 128 bytes of ram, >4K ROM
 ;     0x11 - 0b00010001 - 128 bytes of ram, serial port, >4K ROM
 ;     0x12 - 0b00010010 - 256 bytes of ram, >4K ROM
@@ -81,10 +81,10 @@ RAMDEST .equ    $0008       ; location in ram for the code to be copied into and
                             ; Right now, this just barely fits into 128 bytes of RAM
 
         .ORG    $E000       ; External Memory in the last 8K
-        .FILL   $20,$E0     ; If this data is read in Full Expansion mode, then this is not a 12K internal ROM chip
+        .FILL   $20,$E0     ; If this data is read in Full Expansion mode, then this is not a >6K internal ROM chip
 
         .ORG    $E800       ; External Memory in the last 6K
-        .FILL   $20,$E8     ; If this data is read in Full Expansion mode, then this is not a 12K internal ROM chip
+        .FILL   $20,$E8     ; If this data is read in Full Expansion mode, then this is not a >4K internal ROM chip
 
         .ORG    $F000       ; External Memory in the last 4K
         .FILL   $20,$F0     ; If this data is read in Full Expansion mode, then this is not a 4K internal ROM chip
@@ -208,7 +208,7 @@ ROM0K:
         JMP     FINISHUP
 
 NOMATCH:
-        CMP     %$E8,R4     ; 12K ROM check if match
+        CMP     %$E8,R4     ; >4K ROM check if match
         JNZ     NEXTCHK
 
 ROM12K:
