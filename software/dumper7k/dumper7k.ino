@@ -5,7 +5,7 @@
 
 // Arduino - TMS7000   - DIP PIN
 // D5      - CLKIN     - PIN 17
-// D7      - ~RESET    - PIN 14 
+// D7      - ~RESET    - PIN 14
 // D10     - SS / B3   - PIN 37
 // D11     - MOSI / B1 - PIN 4
 // D13     - CLK / B2  - PIN 5
@@ -83,11 +83,11 @@ void setup() {
   // Reset pin low
   digitalWrite(PIN_nRESET, LOW);
   // LED off
-  digitalWrite(PIN_LED, LOW); 
+  digitalWrite(PIN_LED, LOW);
 
   // Enable SPI in slave mode
   // (protocol is compatible with default SPI settings)
-  SPCR |= _BV(SPE); 
+  SPCR |= _BV(SPE);
 
   // Enable serial port
   Serial.begin(115200);
@@ -109,16 +109,16 @@ void printHeader()
   Serial.println("    Software: TMS7xxx Dumper - v1.3");
 
   Serial.print(char(0x01));
-  if(g_number[0] == 'U')  //Unknown
+  if (g_number[0] == 'U') //Unknown
   {
-    if(g_cmos)
+    if (g_cmos)
     {
       Serial.println(  "  DetectedID: Unknown_TMS7xCxx");
     }
     else
     {
       Serial.println(  "  DetectedID: Unknown_TMS7xxx");
-    }    
+    }
   }
   else
   {
@@ -136,7 +136,7 @@ void printHeader()
 
   Serial.print(char(0x01));
   Serial.print(  "     Process: ");
-  if(g_cmos)
+  if (g_cmos)
   {
     Serial.println("CMOS");
   }
@@ -157,7 +157,7 @@ void printHeader()
   //Serial.print("ID Byte: 0x");
   //Serial.println(g_ID_byte, HEX);
   //Serial.println();
-  
+
   if (g_rom_bytes > 0)
   {
     if (g_rom_bytes == 0x0800)
@@ -206,7 +206,7 @@ void processIDByte()
   if (analogRead(PIN_ANALOG) > 880) //determined with exactly 2 chips on this platform (arduino nano)
     g_cmos = true;
 
-  switch(g_ID_byte) {
+  switch (g_ID_byte) {
     case 0x00:
       if (g_cmos)
         g_number = "70C00";
@@ -215,7 +215,7 @@ void processIDByte()
       g_ram_bytes = 0x80;
       g_rom_bytes = 0;
       g_serial_port = false;
-    break;
+      break;
     case 0x01:
       if (g_cmos)
         g_number = "70C01";
@@ -224,12 +224,12 @@ void processIDByte()
       g_ram_bytes = 0x80;
       g_rom_bytes = 0;
       g_serial_port = true;
-    break;
+      break;
     case 0x02:
       g_ram_bytes = 0x100;
       g_rom_bytes = 0;
       g_serial_port = false;
-    break;
+      break;
     case 0x03:
       if (g_cmos)
         g_number = "70C02";
@@ -238,7 +238,7 @@ void processIDByte()
       g_ram_bytes = 0x100;
       g_rom_bytes = 0;
       g_serial_port = true;
-    break;
+      break;
     case 0x04:
       if (g_cmos)
         g_number = "70C20";
@@ -247,7 +247,7 @@ void processIDByte()
       g_ram_bytes = 0x80;
       g_rom_bytes = 0x0800;
       g_serial_port = false;
-    break;
+      break;
     case 0x05:
       if (g_cmos)
         g_number = "70C21";
@@ -256,12 +256,12 @@ void processIDByte()
       g_ram_bytes = 0x80;
       g_rom_bytes = 0x0800;
       g_serial_port = true;
-    break;
+      break;
     case 0x06:
       g_ram_bytes = 0x100;
       g_rom_bytes = 0x0800;
       g_serial_port = false;
-    break;
+      break;
     case 0x07:
       if (g_cmos)
         g_number = "70C22";
@@ -270,7 +270,7 @@ void processIDByte()
       g_ram_bytes = 0x100;
       g_rom_bytes = 0x0800;
       g_serial_port = true;
-    break;
+      break;
     case 0x08:
       if (g_cmos)
         g_number = "70C40";
@@ -279,7 +279,7 @@ void processIDByte()
       g_ram_bytes = 0x80;
       g_rom_bytes = 0x1000;
       g_serial_port = false;
-    break;
+      break;
     case 0x09:
       if (g_cmos)
         g_number = "70C41";
@@ -288,12 +288,12 @@ void processIDByte()
       g_ram_bytes = 0x80;
       g_rom_bytes = 0x1000;
       g_serial_port = true;
-    break;
+      break;
     case 0x0a:
       g_ram_bytes = 0x100;
       g_rom_bytes = 0x1000;
       g_serial_port = false;
-    break;
+      break;
     case 0x0b:
       if (g_cmos)
         g_number = "70C42"; //could be a 77C42 if it has a UV window
@@ -302,7 +302,7 @@ void processIDByte()
       g_ram_bytes = 0x100;
       g_rom_bytes = 0x1000;
       g_serial_port = true;
-    break;
+      break;
     case 0x10:
       if (g_cmos)
       {
@@ -313,10 +313,10 @@ void processIDByte()
       {
         g_number = "70120";
         g_rom_bytes = 0x3000;
-      }        
+      }
       g_ram_bytes = 0x80;
       g_serial_port = false;
-    break;
+      break;
     case 0x11:
       if (g_cmos)
       {
@@ -327,10 +327,10 @@ void processIDByte()
       {
         g_number = "70121";
         g_rom_bytes = 0x3000;
-      }        
+      }
       g_ram_bytes = 0x80;
       g_serial_port = true;
-    break;
+      break;
     case 0x12:
       if (g_cmos)
       {
@@ -339,10 +339,10 @@ void processIDByte()
       else
       {
         g_rom_bytes = 0x3000;
-      }        
+      }
       g_ram_bytes = 0x100;
       g_serial_port = false;
-    break;
+      break;
     case 0x13:
       if (g_cmos)
       {
@@ -353,10 +353,10 @@ void processIDByte()
       {
         g_number = "70122";
         g_rom_bytes = 0x3000;
-      }        
+      }
       g_ram_bytes = 0x80;
       g_serial_port = true;
-    break;
+      break;
   }
 }
 
@@ -380,10 +380,10 @@ void goToWaitingState()
   // Reset pin low
   digitalWrite(PIN_nRESET, LOW);
   // LED off
-  digitalWrite(PIN_LED, LOW); 
+  digitalWrite(PIN_LED, LOW);
 
   // Clock some while reset
-  for(int i=0; i<100; i++) {
+  for (int i = 0; i < 100; i++) {
     clockPulse();
   }
 
@@ -465,19 +465,19 @@ void dumpingStateLogic()
   {
     if (g_count < g_rom_bytes + 0x1001)//(special case where the tms7000 dumps 12k and we only care about the last 8k)
     {
-      if( g_count > 0x1000 )      
+      if ( g_count > 0x1000 )
         g_writer.addData(x);
       else
       {
-        if(g_count%32 == 0)
+        if (g_count % 32 == 0)
         {
           Serial.print(".");//so we look like we're doing something for 4k of read
-          if(g_count%2048 == 0)
+          if (g_count % 2048 == 0)
           {
-            Serial.println();          
+            Serial.println();
           }
         }
-      }       
+      }
 
       g_count++;
       if (g_count == g_rom_bytes + 0x1001)
@@ -491,11 +491,11 @@ void dumpingStateLogic()
   }
   else
   {
-    if (g_count < g_rom_bytes+1)
+    if (g_count < g_rom_bytes + 1)
     {
       g_writer.addData(x);
       g_count++;
-      if (g_count == g_rom_bytes+1)
+      if (g_count == g_rom_bytes + 1)
       {
         g_writer.finish();
         // LED on
@@ -555,7 +555,7 @@ void loop() {
   else if (g_state == STATE_DUMPING)
   {
     dumpingStateLogic();
-  } 
+  }
   else { // g_state = STATE_WAITING2
     waiting2StateLogic();
   }
