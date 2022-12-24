@@ -201,7 +201,7 @@ void goToGettingIDState()
 
 void processIDByte()
 {
-  Serial.println(analogRead(PIN_ANALOG));
+  //Serial.println(analogRead(PIN_ANALOG));
   //Do not touch the board when detecting process, it can erroneously read as CMOS
   if (analogRead(PIN_ANALOG) > 880) //determined with exactly 2 chips on this platform (arduino nano)
     g_cmos = true;
