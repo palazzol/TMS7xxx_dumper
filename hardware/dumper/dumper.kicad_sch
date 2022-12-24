@@ -2423,7 +2423,7 @@
     (property "Reference" "R1" (id 0) (at 98.425 76.2 90)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "4.7k" (id 1) (at 99.06 78.74 90)
+    (property "Value" "1k" (id 1) (at 99.06 78.74 90)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical" (id 2) (at 97.155 79.502 90)
@@ -2914,7 +2914,7 @@
       (reference "J11") (unit 1) (value "ss") (footprint "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical")
     )
     (path "/87fb4618-ffba-4098-894c-2a108e97e5a6"
-      (reference "R1") (unit 1) (value "4.7k") (footprint "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical")
+      (reference "R1") (unit 1) (value "1k") (footprint "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical")
     )
     (path "/010d4c25-3047-4e82-9722-4113a4b03be6"
       (reference "R2") (unit 1) (value "4.7k") (footprint "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P2.54mm_Vertical")
