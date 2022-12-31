@@ -73,19 +73,21 @@ R7      .equ    7
 ; peripherals
 
 IOCNT0  .equ    0   ; Used to control modes via the CPU
-BPORT   .equ    6   ; Used to switch modes via external connection, and used for SPI interface 
+;BPORT   .equ    6   ; Used to switch modes via external connection, and used for SPI interface
+ARDADDR .equ    $1000 ; used to write to the Arduino
 SCTL1   .equ    21  ; Used to probe for a Serial Port on the 70x2
 SCTL1C  .equ    24  ; Used to probe for a Serial Port on the 70Cx2
 
 RAMDEST .equ    $0008       ; location in ram for the code to be copied into and run from
-                            ; Right now, this just barely fits into 128 bytes of RAM
 
-        .ORG    $E000       ; External Memory in the last 8K
-        .FILL   $20,$E0     ; If this data is read in Full Expansion mode, then this is not a >6K internal ROM chip
+        .ORG    $0000       ; nothing here
+        .FILL   $1000,$00
+
+        .ORG    $1000
 
         ; Initialize port, stack
 START:
-        MOVP    %$FF,BPORT  ; PORTB = FF, PORTB=All ones (MC high, make sure external ROM enabled)
+;        MOVP    %$FF,BPORT  ; PORTB = FF, PORTB=All ones (MC high, make sure external ROM enabled)
         MOV     %$0C,B      ; B  = 0C
         LDSP                ; SP = 000C - we don't use stack anyway
         MOVP    %$AA,IOCNT0 ; Disable some interrupts, set for Full Expansion mode after mode switch
@@ -111,7 +113,7 @@ RAM256:
         JMP     SERCHK
 RAM128:
         MOV     %$00,R3     ; 128 bytes
-        JMP     SERCHK
+;        JMP     SERCHK
 
         ; Try to store bottom two bits of SCTL1 register and see if they stay
         ; if so, we have a UART
@@ -153,7 +155,7 @@ SERFOUND:
 SERFAIL:
 
         ; Copy code from External ROM to RAM
-
+        MOV     %$10,R2     ; More than enough for the size of our code
 COPYCODE:
         MOVD    %RAMCODE,R5 ; Start of ROM source
         MOVD    %RAMDEST,R7 ; Start of RAM destination
@@ -164,120 +166,87 @@ CPYLOOP:
         ADC     %$0,R6      ; ripple carry to high byte
         INC     R5          ; increment source
         ADC     %$0,R4      ; ripple carry to high byte
-        CMP     %(ENDCODE/$100),R4          ; am I at high byte of ENDCODE?
+        DEC     R2          ; done yet?
         JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
-        CMP     %$(ENDCODE%$100),R5         ; am I at low byte of ENDCODE?
-        JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
-
-        ; We reached ENDCODE, so our code copy to RAM is done
+        ; our code copy to RAM is done
         BR      @RAMDEST    ; jump to code in RAM
 
 ; Start of code to be executed in RAM
 ; (Must be relocatable)
 
 RAMCODE:
-        MOVP    %$FE,BPORT  ; PORTB = FE, PORTB.0=0 (Flip the MC pin low, internal ROM enabled)
+        MOV     %$55,A      ; Byte signifying request to switch modes
+        STA     @ARDADDR    ; switch modes
         MOV     %$FF,B      ; B = FF
 DELAY:
         DEC     B           ; B = B-1
         JNZ     DELAY       ; wait a bit for things to settle
         BR      @BACK2ROM
 
-ENDCODE:
-;       End of code to be executed in RAM
-
 ;   determine internal ROM size
 
 BACK2ROM:
-        MOVD    %$E800,R5   ; Start of 6K ROM
+        MOV     %$08,R2     ; Number of 2K pages
+        MOVD    %$C000,R5   ; Start of 16K ROM
 X1:     LDA     *R5
-        CMP     R4,A        ; expected byte in R4 if reading external memory
-        JNZ     NOMATCH
+        MOV     R4,B        ; expected byte might have a bit 3 set, but we need to reset it
+        AND     %$F7,B      ; before comparing to the byte read from ROM
+        CMP     B,A         ; expected byte in B if reading external memory
+        JNZ     FINISHUP
         INC     R5
         CMP     %$20,R5     ; done checking 32 bytes?
         JNZ     X1
-        MOV     %$0,R5      ; if so, start next region, + 0x0800
+        MOV     %$0,R5      ; if so, start next 2K region, + 0x0800
+        DEC     R2          ; but first, subtract 1 from num of 2K regions
         ADD     %$8,R4
         JNZ     X1          ; done with all regions?
 
-ROM0K:
-        JMP     FINISHUP
-
-NOMATCH:
-        CMP     %$E8,R4     ; >4K ROM check if match
-        JNZ     NEXTCHK
-
-ROM12K:
-        OR      %$10,R3
-        MOV     %$CF,R4     ; R4:R5 = D000-1, (Start of 12K Internal ROM)
-        JMP     DODUMP
-
-NEXTCHK:
-        CMP     %$F0,R4     ; 4K ROM if match
-        JNZ     ROM2K
-
-ROM4K:  OR      %$08,R3
-        JMP     FINISHUP
-                            
-ROM2K:  
-        OR      %$04,R3
 FINISHUP:
-        DEC     R4          ;    R4:R5 = 0000-1, (End of Internal ROM)
-                            ; or R4:R5 = F000-1, (Start of 4K Internal ROM)
-                            ; or R4:R5 = F800-1, (Start of 2K Internal ROM)
-        
-DODUMP:
-        MOV     %$FF,R5
+        ; Update R3 with # of 2K pages from R2
+        CLRC
+        RL      R2
+        RL      R2
+        ADD     R2,R3       ; add to ID byte in the right place
 
-        ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
-        ANDP    %$F7,BPORT  ; PORTB.3 = ~SS = 0
+        ; at this point:
+        ;   R3 is the complete ID byte
+        ;   R4 is the high byte of the start of internal rom to dump 
+        ;     (or 00)
+        MOV     %$00,R5     ; now R4:R5 is the start of internal ROM (or 0000)
+
+DODUMP:
         MOV     R3,A
-        JMP     JUMPIN
+        STA     @ARDADDR    ; send ID byte to the arduino
+
+        CMP     %$00,R4     ; check if no internal rom
+        JZ      DONE
 
 NXTBYTE:
         LDA     *R5         ; Read internal ROM byte
-JUMPIN:
-        MOV     %$8,R2      ; R2 = 8, bit counter?
-NXTBIT:
-        ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
-
-        RL      A           ; get each bit, MSB first
-        JHS     DOONE       ; if 1, jump
-        ANDP    %$FD,BPORT  ; PORTB.1 = MOSI = 0
-        JMP     AHEAD
-DOONE:
-        ORP     %$02,BPORT  ; PORTB.1 = MOSI = 1
-AHEAD:
-        ORP     %$04,BPORT  ; PORTB.2 = SCK = 1
-        DEC     R2          ; decrement bit counter
-        JNZ     NXTBIT      ; do next bit
+        STA     @ARDADDR    ; send a byte to the arduino
 
         INC     R5          ; increment for next location to read
         ADC     %$0,R4
         JNZ     NXTBYTE     ; unless we roll over to 0000, do next byte
 
-        ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
-        ORP     %$08,BPORT  ; PORTB.3 = ~SS = 1
-
 DONE:
         JMP     DONE        ; loop forever
-;ENDCODE:
-;       End of code to be executed in RAM
 
-RPRGSIZE .equ   ENDCODE-RAMCODE
+        .ORG    $C000       ; External Memory in the last 16K
+        .FILL   $20,$C0     ; If this data is read in Full Expansion mode, then this is not a 16K internal ROM chip
 
-        .ORG    $E800       ; External Memory in the last 6K
-        .FILL   $20,$E8     ; If this data is read in Full Expansion mode, then this is not a >4K internal ROM chip
+        .ORG    $D000       ; External Memory in the last 12K
+        .FILL   $20,$D0     ; If this data is read in Full Expansion mode, then this is not a >6K internal ROM chip
 
-        .ORG    $F000       ; External Memory in the last 4K
+        .ORG    $E000       ; External Memory in the last 8K
+        .FILL   $20,$E0     ; If this data is read in Full Expansion mode, then this is not a >6K internal ROM chip
+
+        .ORG    $FF00       ; External Memory in the last 4K
         .FILL   $20,$F0     ; If this data is read in Full Expansion mode, then this is not a 4K internal ROM chip
-
-        .ORG    $F800       ; External Memory in the last 2K
-        .FILL   $20,$F8     ; If this code is read in Full Expansion mode, then this is not a 2K internal ROM chip
 
         ; Vectors go here
 
-        .ORG    0FFF8H
+        .ORG    $FFF8
 
         .MSFIRST            ; need this, or .word statements are backwards for this CPU
 
