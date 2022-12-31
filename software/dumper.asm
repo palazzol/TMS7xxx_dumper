@@ -83,15 +83,6 @@ RAMDEST .equ    $0008       ; location in ram for the code to be copied into and
         .ORG    $E000       ; External Memory in the last 8K
         .FILL   $20,$E0     ; If this data is read in Full Expansion mode, then this is not a >6K internal ROM chip
 
-        .ORG    $E800       ; External Memory in the last 6K
-        .FILL   $20,$E8     ; If this data is read in Full Expansion mode, then this is not a >4K internal ROM chip
-
-        .ORG    $F000       ; External Memory in the last 4K
-        .FILL   $20,$F0     ; If this data is read in Full Expansion mode, then this is not a 4K internal ROM chip
-
-        .ORG    $F800       ; External Memory in the last 2K
-        .FILL   $20,$F8     ; If this code is read in Full Expansion mode, then this is not a 2K internal ROM chip
-
         ; Initialize port, stack
 START:
         MOVP    %$FF,BPORT  ; PORTB = FF, PORTB=All ones (MC high, make sure external ROM enabled)
@@ -190,9 +181,14 @@ RAMCODE:
 DELAY:
         DEC     B           ; B = B-1
         JNZ     DELAY       ; wait a bit for things to settle
+        BR      @BACK2ROM
+
+ENDCODE:
+;       End of code to be executed in RAM
 
 ;   determine internal ROM size
 
+BACK2ROM:
         MOVD    %$E800,R5   ; Start of 6K ROM
 X1:     LDA     *R5
         CMP     R4,A        ; expected byte in R4 if reading external memory
@@ -265,10 +261,19 @@ AHEAD:
 
 DONE:
         JMP     DONE        ; loop forever
-ENDCODE:
+;ENDCODE:
 ;       End of code to be executed in RAM
 
 RPRGSIZE .equ   ENDCODE-RAMCODE
+
+        .ORG    $E800       ; External Memory in the last 6K
+        .FILL   $20,$E8     ; If this data is read in Full Expansion mode, then this is not a >4K internal ROM chip
+
+        .ORG    $F000       ; External Memory in the last 4K
+        .FILL   $20,$F0     ; If this data is read in Full Expansion mode, then this is not a 4K internal ROM chip
+
+        .ORG    $F800       ; External Memory in the last 2K
+        .FILL   $20,$F8     ; If this code is read in Full Expansion mode, then this is not a 2K internal ROM chip
 
         ; Vectors go here
 

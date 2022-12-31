@@ -90,226 +90,231 @@
 0084   E018 E0 E0 E0 E0 
 0084   E01C E0 E0 E0 E0 
 0085   E020             
-0086   E800                     .ORG    $E800       ; External Memory in the last 6K
-0087   E800 E8 E8 E8 E8         .FILL   $20,$E8     ; If this data is read in Full Expansion mode, then this is not a >4K internal ROM chip
-0087   E804 E8 E8 E8 E8 
-0087   E808 E8 E8 E8 E8 
-0087   E80C E8 E8 E8 E8 
-0087   E810 E8 E8 E8 E8 
-0087   E814 E8 E8 E8 E8 
-0087   E818 E8 E8 E8 E8 
-0087   E81C E8 E8 E8 E8 
-0088   E820             
-0089   F000                     .ORG    $F000       ; External Memory in the last 4K
-0090   F000 F0 F0 F0 F0         .FILL   $20,$F0     ; If this data is read in Full Expansion mode, then this is not a 4K internal ROM chip
-0090   F004 F0 F0 F0 F0 
-0090   F008 F0 F0 F0 F0 
-0090   F00C F0 F0 F0 F0 
-0090   F010 F0 F0 F0 F0 
-0090   F014 F0 F0 F0 F0 
-0090   F018 F0 F0 F0 F0 
-0090   F01C F0 F0 F0 F0 
-0091   F020             
-0092   F800                     .ORG    $F800       ; External Memory in the last 2K
-0093   F800 F8 F8 F8 F8         .FILL   $20,$F8     ; If this code is read in Full Expansion mode, then this is not a 2K internal ROM chip
-0093   F804 F8 F8 F8 F8 
-0093   F808 F8 F8 F8 F8 
-0093   F80C F8 F8 F8 F8 
-0093   F810 F8 F8 F8 F8 
-0093   F814 F8 F8 F8 F8 
-0093   F818 F8 F8 F8 F8 
-0093   F81C F8 F8 F8 F8 
-0094   F820             
-0095   F820                     ; Initialize port, stack
-0096   F820             START:
-0097   F820 A2 FF 06            MOVP    %$FF,BPORT  ; PORTB = FF, PORTB=All ones (MC high, make sure external ROM enabled)
-0098   F823 52 0C               MOV     %$0C,B      ; B  = 0C
-0099   F825 0D                  LDSP                ; SP = 000C - we don't use stack anyway
-0100   F826 A2 AA 00            MOVP    %$AA,IOCNT0 ; Disable some interrupts, set for Full Expansion mode after mode switch
-0101   F829             
-0102   F829                     ; Try to identify this chip and store a code in R3
-0103   F829             
-0104   F829             RAMCHK:
-0105   F829                     ; Identify RAM size:
-0106   F829                     ; do checks twice with different data,
-0107   F829                     ; to protect against random luck matches
-0108   F829             
-0109   F829 72 55 FF            MOV     %$55,$ff
-0110   F82C 72 AA 7F            MOV     %$AA,$7f
-0111   F82F 7D 55 FF            CMP     %$55,$ff    ; check for 256 bytes working
-0112   F832 E6 10               JNZ     RAM128
-0113   F834 72 AA FF            MOV     %$AA,$ff
-0114   F837 72 55 7F            MOV     %$55,$7f
-0115   F83A 7D AA FF            CMP     %$AA,$ff    ; doublecheck for 256 bytes working
-0116   F83D E6 05               JNZ     RAM128
-0117   F83F             
-0118   F83F             RAM256:
-0119   F83F 72 02 03            MOV     %$02,R3     ; 256 bytes
-0120   F842 E0 05               JMP     SERCHK
-0121   F844             RAM128:
-0122   F844 72 00 03            MOV     %$00,R3     ; 128 bytes
-0123   F847 E0 00               JMP     SERCHK
-0124   F849             
-0125   F849                     ; Try to store bottom two bits of SCTL1 register and see if they stay
-0126   F849                     ; if so, we have a UART
-0127   F849                     ; We try both the locations, once for the 70X2 chip, and then the 70CX2 chip
-0128   F849             
-0129   F849             SERCHK:
-0130   F849 A3 FC 15            ANDP    %$FC,SCTL1  ; zero the 2 LS bits
-0131   F84C 80 15               MOVP    SCTL1,A
-0132   F84E 23 03               AND     %$03,A
-0133   F850 E6 16               JNZ     SERCHKC     ; fail if not zero
-0134   F852 A4 01 15            ORP     %$01,SCTL1  ; set the bottom bit
-0135   F855 80 15               MOVP    SCTL1,A
-0136   F857 23 03               AND     %$03,A 
-0137   F859 2D 01               CMP     %$01,A      ; check if it's a one now
-0138   F85B E6 0B               JNZ     SERCHKC     ; or fail
-0139   F85D A4 02 15            ORP     %$02,SCTL1  ; set the next bit
-0140   F860 80 15               MOVP    SCTL1,A
-0141   F862 23 03               AND     %$03,A 
-0142   F864 2D 03               CMP     %$03,A      ; should be 3 now
-0143   F866 E2 1F               JZ      SERFOUND    ; if not fail
-0144   F868             
-0145   F868             SERCHKC:
-0146   F868 A3 FC 18            ANDP    %$FC,SCTL1C  ; zero the 2 LS bits
-0147   F86B 80 18               MOVP    SCTL1C,A
-0148   F86D 23 03               AND     %$03,A
-0149   F86F E6 19               JNZ     SERFAIL     ; fail if not zero
-0150   F871 A4 01 18            ORP     %$01,SCTL1C  ; set the bottom bit
-0151   F874 80 18               MOVP    SCTL1C,A
-0152   F876 23 03               AND     %$03,A 
-0153   F878 2D 01               CMP     %$01,A      ; check if it's a one now
-0154   F87A E6 0E               JNZ     SERFAIL     ; or fail
-0155   F87C A4 02 18            ORP     %$02,SCTL1C  ; set the next bit
-0156   F87F 80 18               MOVP    SCTL1C,A
-0157   F881 23 03               AND     %$03,A 
-0158   F883 2D 03               CMP     %$03,A      ; should be 3 now
-0159   F885 E6 03               JNZ     SERFAIL     ; if not fail
-0160   F887             SERFOUND:
-0161   F887 74 01 03            OR      %$01,R3     ; UART detected, set this bit
-0162   F88A             SERFAIL:
-0163   F88A             
-0164   F88A                     ; Copy code from External ROM to RAM
-0165   F88A             
-0166   F88A             COPYCODE:
-0167   F88A 88 F8 AD 05         MOVD    %RAMCODE,R5 ; Start of ROM source
-0168   F88E 88 00 08 07         MOVD    %RAMDEST,R7 ; Start of RAM destination
-0169   F892             CPYLOOP:
-0170   F892 9A 05               LDA     *R5         ; grab code byte
-0171   F894 9B 07               STA     *R7         ; move code byte
-0172   F896 D3 07               INC     R7          ; increment destination
-0173   F898 79 00 06            ADC     %$0,R6      ; ripple carry to high byte
-0174   F89B D3 05               INC     R5          ; increment source
-0175   F89D 79 00 04            ADC     %$0,R4      ; ripple carry to high byte
-0176   F8A0 7D F9 04            CMP     %(ENDCODE/$100),R4          ; am I at high byte of ENDCODE?
-0177   F8A3 E6 ED               JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
-0178   F8A5 7D 22 05            CMP     %$(ENDCODE%$100),R5         ; am I at low byte of ENDCODE?
-0179   F8A8 E6 E8               JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
-0180   F8AA             
-0181   F8AA                     ; We reached ENDCODE, so our code copy to RAM is done
-0182   F8AA 8C 00 08            BR      @RAMDEST    ; jump to code in RAM
-0183   F8AD             
-0184   F8AD             ; Start of code to be executed in RAM
-0185   F8AD             ; (Must be relocatable)
-0186   F8AD             
-0187   F8AD             RAMCODE:
-0188   F8AD A2 FE 06            MOVP    %$FE,BPORT  ; PORTB = FE, PORTB.0=0 (Flip the MC pin low, internal ROM enabled)
-0189   F8B0 52 FF               MOV     %$FF,B      ; B = FF
-0190   F8B2             DELAY:
-0191   F8B2 C2                  DEC     B           ; B = B-1
-0192   F8B3 E6 FD               JNZ     DELAY       ; wait a bit for things to settle
-0193   F8B5             
-0194   F8B5             ;   determine internal ROM size
-0195   F8B5             
-0196   F8B5 88 E8 00 05         MOVD    %$E800,R5   ; Start of 6K ROM
-0197   F8B9 9A 05       X1:     LDA     *R5
-0198   F8BB 1D 04               CMP     R4,A        ; expected byte in R4 if reading external memory
-0199   F8BD E6 11               JNZ     NOMATCH
-0200   F8BF D3 05               INC     R5
-0201   F8C1 7D 20 05            CMP     %$20,R5     ; done checking 32 bytes?
-0202   F8C4 E6 F3               JNZ     X1
-0203   F8C6 72 00 05            MOV     %$0,R5      ; if so, start next region, + 0x0800
-0204   F8C9 78 08 04            ADD     %$8,R4
-0205   F8CC E6 EB               JNZ     X1          ; done with all regions?
-0206   F8CE             
-0207   F8CE             ROM0K:
-0208   F8CE E0 1A               JMP     FINISHUP
-0209   F8D0             
-0210   F8D0             NOMATCH:
-0211   F8D0 7D E8 04            CMP     %$E8,R4     ; >4K ROM check if match
-0212   F8D3 E6 08               JNZ     NEXTCHK
-0213   F8D5             
-0214   F8D5             ROM12K:
-0215   F8D5 74 10 03            OR      %$10,R3
-0216   F8D8 72 CF 04            MOV     %$CF,R4     ; R4:R5 = D000-1, (Start of 12K Internal ROM)
-0217   F8DB E0 0F               JMP     DODUMP
-0218   F8DD             
-0219   F8DD             NEXTCHK:
-0220   F8DD 7D F0 04            CMP     %$F0,R4     ; 4K ROM if match
-0221   F8E0 E6 05               JNZ     ROM2K
-0222   F8E2             
-0223   F8E2 74 08 03    ROM4K:  OR      %$08,R3
-0224   F8E5 E0 03               JMP     FINISHUP
-0225   F8E7                                         
-0226   F8E7             ROM2K:  
-0227   F8E7 74 04 03            OR      %$04,R3
-0228   F8EA             FINISHUP:
-0229   F8EA D2 04               DEC     R4          ;    R4:R5 = 0000-1, (End of Internal ROM)
-0230   F8EC                                         ; or R4:R5 = F000-1, (Start of 4K Internal ROM)
-0231   F8EC                                         ; or R4:R5 = F800-1, (Start of 2K Internal ROM)
-0232   F8EC                     
-0233   F8EC             DODUMP:
-0234   F8EC 72 FF 05            MOV     %$FF,R5
-0235   F8EF             
-0236   F8EF A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
-0237   F8F2 A3 F7 06            ANDP    %$F7,BPORT  ; PORTB.3 = ~SS = 0
-0238   F8F5 12 03               MOV     R3,A
-0239   F8F7 E0 02               JMP     JUMPIN
-0240   F8F9             
-0241   F8F9             NXTBYTE:
-0242   F8F9 9A 05               LDA     *R5         ; Read internal ROM byte
-0243   F8FB             JUMPIN:
-0244   F8FB 72 08 02            MOV     %$8,R2      ; R2 = 8, bit counter?
-0245   F8FE             NXTBIT:
-0246   F8FE A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
-0247   F901             
-0248   F901 BE                  RL      A           ; get each bit, MSB first
-0249   F902 E3 05               JHS     DOONE       ; if 1, jump
-0250   F904 A3 FD 06            ANDP    %$FD,BPORT  ; PORTB.1 = MOSI = 0
-0251   F907 E0 03               JMP     AHEAD
-0252   F909             DOONE:
-0253   F909 A4 02 06            ORP     %$02,BPORT  ; PORTB.1 = MOSI = 1
-0254   F90C             AHEAD:
-0255   F90C A4 04 06            ORP     %$04,BPORT  ; PORTB.2 = SCK = 1
-0256   F90F D2 02               DEC     R2          ; decrement bit counter
-0257   F911 E6 EB               JNZ     NXTBIT      ; do next bit
-0258   F913             
-0259   F913 D3 05               INC     R5          ; increment for next location to read
-0260   F915 79 00 04            ADC     %$0,R4
-0261   F918 E6 DF               JNZ     NXTBYTE     ; unless we roll over to 0000, do next byte
-0262   F91A             
-0263   F91A A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
-0264   F91D A4 08 06            ORP     %$08,BPORT  ; PORTB.3 = ~SS = 1
-0265   F920             
-0266   F920             DONE:
-0267   F920 E0 FE               JMP     DONE        ; loop forever
-0268   F922             ENDCODE:
-0269   F922             ;       End of code to be executed in RAM
-0270   F922             
-0271   F922             RPRGSIZE .equ   ENDCODE-RAMCODE
-0272   F922             
-0273   F922                     ; Vectors go here
-0274   F922             
-0275   FFF8                     .ORG    0FFF8H
-0276   FFF8             
-0277   FFF8                     .MSFIRST            ; need this, or .word statements are backwards for this CPU
-0278   FFF8             
-0279   FFF8 F8 20               .word   START
-0280   FFFA F8 20               .word   START
-0281   FFFC F8 20               .word   START
-0282   FFFE F8 20               .word   START
-0283   10000             
-0284   10000                     .end
-0285   10000             
-0286   10000             
+0086   E020                     ; Initialize port, stack
+0087   E020             START:
+0088   E020 A2 FF 06            MOVP    %$FF,BPORT  ; PORTB = FF, PORTB=All ones (MC high, make sure external ROM enabled)
+0089   E023 52 0C               MOV     %$0C,B      ; B  = 0C
+0090   E025 0D                  LDSP                ; SP = 000C - we don't use stack anyway
+0091   E026 A2 AA 00            MOVP    %$AA,IOCNT0 ; Disable some interrupts, set for Full Expansion mode after mode switch
+0092   E029             
+0093   E029                     ; Try to identify this chip and store a code in R3
+0094   E029             
+0095   E029             RAMCHK:
+0096   E029                     ; Identify RAM size:
+0097   E029                     ; do checks twice with different data,
+0098   E029                     ; to protect against random luck matches
+0099   E029             
+0100   E029 72 55 FF            MOV     %$55,$ff
+0101   E02C 72 AA 7F            MOV     %$AA,$7f
+0102   E02F 7D 55 FF            CMP     %$55,$ff    ; check for 256 bytes working
+0103   E032 E6 10               JNZ     RAM128
+0104   E034 72 AA FF            MOV     %$AA,$ff
+0105   E037 72 55 7F            MOV     %$55,$7f
+0106   E03A 7D AA FF            CMP     %$AA,$ff    ; doublecheck for 256 bytes working
+0107   E03D E6 05               JNZ     RAM128
+0108   E03F             
+0109   E03F             RAM256:
+0110   E03F 72 02 03            MOV     %$02,R3     ; 256 bytes
+0111   E042 E0 05               JMP     SERCHK
+0112   E044             RAM128:
+0113   E044 72 00 03            MOV     %$00,R3     ; 128 bytes
+0114   E047 E0 00               JMP     SERCHK
+0115   E049             
+0116   E049                     ; Try to store bottom two bits of SCTL1 register and see if they stay
+0117   E049                     ; if so, we have a UART
+0118   E049                     ; We try both the locations, once for the 70X2 chip, and then the 70CX2 chip
+0119   E049             
+0120   E049             SERCHK:
+0121   E049 A3 FC 15            ANDP    %$FC,SCTL1  ; zero the 2 LS bits
+0122   E04C 80 15               MOVP    SCTL1,A
+0123   E04E 23 03               AND     %$03,A
+0124   E050 E6 16               JNZ     SERCHKC     ; fail if not zero
+0125   E052 A4 01 15            ORP     %$01,SCTL1  ; set the bottom bit
+0126   E055 80 15               MOVP    SCTL1,A
+0127   E057 23 03               AND     %$03,A 
+0128   E059 2D 01               CMP     %$01,A      ; check if it's a one now
+0129   E05B E6 0B               JNZ     SERCHKC     ; or fail
+0130   E05D A4 02 15            ORP     %$02,SCTL1  ; set the next bit
+0131   E060 80 15               MOVP    SCTL1,A
+0132   E062 23 03               AND     %$03,A 
+0133   E064 2D 03               CMP     %$03,A      ; should be 3 now
+0134   E066 E2 1F               JZ      SERFOUND    ; if not fail
+0135   E068             
+0136   E068             SERCHKC:
+0137   E068 A3 FC 18            ANDP    %$FC,SCTL1C  ; zero the 2 LS bits
+0138   E06B 80 18               MOVP    SCTL1C,A
+0139   E06D 23 03               AND     %$03,A
+0140   E06F E6 19               JNZ     SERFAIL     ; fail if not zero
+0141   E071 A4 01 18            ORP     %$01,SCTL1C  ; set the bottom bit
+0142   E074 80 18               MOVP    SCTL1C,A
+0143   E076 23 03               AND     %$03,A 
+0144   E078 2D 01               CMP     %$01,A      ; check if it's a one now
+0145   E07A E6 0E               JNZ     SERFAIL     ; or fail
+0146   E07C A4 02 18            ORP     %$02,SCTL1C  ; set the next bit
+0147   E07F 80 18               MOVP    SCTL1C,A
+0148   E081 23 03               AND     %$03,A 
+0149   E083 2D 03               CMP     %$03,A      ; should be 3 now
+0150   E085 E6 03               JNZ     SERFAIL     ; if not fail
+0151   E087             SERFOUND:
+0152   E087 74 01 03            OR      %$01,R3     ; UART detected, set this bit
+0153   E08A             SERFAIL:
+0154   E08A             
+0155   E08A                     ; Copy code from External ROM to RAM
+0156   E08A             
+0157   E08A             COPYCODE:
+0158   E08A 88 E0 AD 05         MOVD    %RAMCODE,R5 ; Start of ROM source
+0159   E08E 88 00 08 07         MOVD    %RAMDEST,R7 ; Start of RAM destination
+0160   E092             CPYLOOP:
+0161   E092 9A 05               LDA     *R5         ; grab code byte
+0162   E094 9B 07               STA     *R7         ; move code byte
+0163   E096 D3 07               INC     R7          ; increment destination
+0164   E098 79 00 06            ADC     %$0,R6      ; ripple carry to high byte
+0165   E09B D3 05               INC     R5          ; increment source
+0166   E09D 79 00 04            ADC     %$0,R4      ; ripple carry to high byte
+0167   E0A0 7D E0 04            CMP     %(ENDCODE/$100),R4          ; am I at high byte of ENDCODE?
+0168   E0A3 E6 ED               JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
+0169   E0A5 7D B8 05            CMP     %$(ENDCODE%$100),R5         ; am I at low byte of ENDCODE?
+0170   E0A8 E6 E8               JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
+0171   E0AA             
+0172   E0AA                     ; We reached ENDCODE, so our code copy to RAM is done
+0173   E0AA 8C 00 08            BR      @RAMDEST    ; jump to code in RAM
+0174   E0AD             
+0175   E0AD             ; Start of code to be executed in RAM
+0176   E0AD             ; (Must be relocatable)
+0177   E0AD             
+0178   E0AD             RAMCODE:
+0179   E0AD A2 FE 06            MOVP    %$FE,BPORT  ; PORTB = FE, PORTB.0=0 (Flip the MC pin low, internal ROM enabled)
+0180   E0B0 52 FF               MOV     %$FF,B      ; B = FF
+0181   E0B2             DELAY:
+0182   E0B2 C2                  DEC     B           ; B = B-1
+0183   E0B3 E6 FD               JNZ     DELAY       ; wait a bit for things to settle
+0184   E0B5 8C E0 B8            BR      @BACK2ROM
+0185   E0B8             
+0186   E0B8             ENDCODE:
+0187   E0B8             ;       End of code to be executed in RAM
+0188   E0B8             
+0189   E0B8             ;   determine internal ROM size
+0190   E0B8             
+0191   E0B8             BACK2ROM:
+0192   E0B8 88 E8 00 05         MOVD    %$E800,R5   ; Start of 6K ROM
+0193   E0BC 9A 05       X1:     LDA     *R5
+0194   E0BE 1D 04               CMP     R4,A        ; expected byte in R4 if reading external memory
+0195   E0C0 E6 11               JNZ     NOMATCH
+0196   E0C2 D3 05               INC     R5
+0197   E0C4 7D 20 05            CMP     %$20,R5     ; done checking 32 bytes?
+0198   E0C7 E6 F3               JNZ     X1
+0199   E0C9 72 00 05            MOV     %$0,R5      ; if so, start next region, + 0x0800
+0200   E0CC 78 08 04            ADD     %$8,R4
+0201   E0CF E6 EB               JNZ     X1          ; done with all regions?
+0202   E0D1             
+0203   E0D1             ROM0K:
+0204   E0D1 E0 1A               JMP     FINISHUP
+0205   E0D3             
+0206   E0D3             NOMATCH:
+0207   E0D3 7D E8 04            CMP     %$E8,R4     ; >4K ROM check if match
+0208   E0D6 E6 08               JNZ     NEXTCHK
+0209   E0D8             
+0210   E0D8             ROM12K:
+0211   E0D8 74 10 03            OR      %$10,R3
+0212   E0DB 72 CF 04            MOV     %$CF,R4     ; R4:R5 = D000-1, (Start of 12K Internal ROM)
+0213   E0DE E0 0F               JMP     DODUMP
+0214   E0E0             
+0215   E0E0             NEXTCHK:
+0216   E0E0 7D F0 04            CMP     %$F0,R4     ; 4K ROM if match
+0217   E0E3 E6 05               JNZ     ROM2K
+0218   E0E5             
+0219   E0E5 74 08 03    ROM4K:  OR      %$08,R3
+0220   E0E8 E0 03               JMP     FINISHUP
+0221   E0EA                                         
+0222   E0EA             ROM2K:  
+0223   E0EA 74 04 03            OR      %$04,R3
+0224   E0ED             FINISHUP:
+0225   E0ED D2 04               DEC     R4          ;    R4:R5 = 0000-1, (End of Internal ROM)
+0226   E0EF                                         ; or R4:R5 = F000-1, (Start of 4K Internal ROM)
+0227   E0EF                                         ; or R4:R5 = F800-1, (Start of 2K Internal ROM)
+0228   E0EF                     
+0229   E0EF             DODUMP:
+0230   E0EF 72 FF 05            MOV     %$FF,R5
+0231   E0F2             
+0232   E0F2 A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+0233   E0F5 A3 F7 06            ANDP    %$F7,BPORT  ; PORTB.3 = ~SS = 0
+0234   E0F8 12 03               MOV     R3,A
+0235   E0FA E0 02               JMP     JUMPIN
+0236   E0FC             
+0237   E0FC             NXTBYTE:
+0238   E0FC 9A 05               LDA     *R5         ; Read internal ROM byte
+0239   E0FE             JUMPIN:
+0240   E0FE 72 08 02            MOV     %$8,R2      ; R2 = 8, bit counter?
+0241   E101             NXTBIT:
+0242   E101 A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+0243   E104             
+0244   E104 BE                  RL      A           ; get each bit, MSB first
+0245   E105 E3 05               JHS     DOONE       ; if 1, jump
+0246   E107 A3 FD 06            ANDP    %$FD,BPORT  ; PORTB.1 = MOSI = 0
+0247   E10A E0 03               JMP     AHEAD
+0248   E10C             DOONE:
+0249   E10C A4 02 06            ORP     %$02,BPORT  ; PORTB.1 = MOSI = 1
+0250   E10F             AHEAD:
+0251   E10F A4 04 06            ORP     %$04,BPORT  ; PORTB.2 = SCK = 1
+0252   E112 D2 02               DEC     R2          ; decrement bit counter
+0253   E114 E6 EB               JNZ     NXTBIT      ; do next bit
+0254   E116             
+0255   E116 D3 05               INC     R5          ; increment for next location to read
+0256   E118 79 00 04            ADC     %$0,R4
+0257   E11B E6 DF               JNZ     NXTBYTE     ; unless we roll over to 0000, do next byte
+0258   E11D             
+0259   E11D A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+0260   E120 A4 08 06            ORP     %$08,BPORT  ; PORTB.3 = ~SS = 1
+0261   E123             
+0262   E123             DONE:
+0263   E123 E0 FE               JMP     DONE        ; loop forever
+0264   E125             ;ENDCODE:
+0265   E125             ;       End of code to be executed in RAM
+0266   E125             
+0267   E125             RPRGSIZE .equ   ENDCODE-RAMCODE
+0268   E125             
+0269   E800                     .ORG    $E800       ; External Memory in the last 6K
+0270   E800 E8 E8 E8 E8         .FILL   $20,$E8     ; If this data is read in Full Expansion mode, then this is not a >4K internal ROM chip
+0270   E804 E8 E8 E8 E8 
+0270   E808 E8 E8 E8 E8 
+0270   E80C E8 E8 E8 E8 
+0270   E810 E8 E8 E8 E8 
+0270   E814 E8 E8 E8 E8 
+0270   E818 E8 E8 E8 E8 
+0270   E81C E8 E8 E8 E8 
+0271   E820             
+0272   F000                     .ORG    $F000       ; External Memory in the last 4K
+0273   F000 F0 F0 F0 F0         .FILL   $20,$F0     ; If this data is read in Full Expansion mode, then this is not a 4K internal ROM chip
+0273   F004 F0 F0 F0 F0 
+0273   F008 F0 F0 F0 F0 
+0273   F00C F0 F0 F0 F0 
+0273   F010 F0 F0 F0 F0 
+0273   F014 F0 F0 F0 F0 
+0273   F018 F0 F0 F0 F0 
+0273   F01C F0 F0 F0 F0 
+0274   F020             
+0275   F800                     .ORG    $F800       ; External Memory in the last 2K
+0276   F800 F8 F8 F8 F8         .FILL   $20,$F8     ; If this code is read in Full Expansion mode, then this is not a 2K internal ROM chip
+0276   F804 F8 F8 F8 F8 
+0276   F808 F8 F8 F8 F8 
+0276   F80C F8 F8 F8 F8 
+0276   F810 F8 F8 F8 F8 
+0276   F814 F8 F8 F8 F8 
+0276   F818 F8 F8 F8 F8 
+0276   F81C F8 F8 F8 F8 
+0277   F820             
+0278   F820                     ; Vectors go here
+0279   F820             
+0280   FFF8                     .ORG    0FFF8H
+0281   FFF8             
+0282   FFF8                     .MSFIRST            ; need this, or .word statements are backwards for this CPU
+0283   FFF8             
+0284   FFF8 E0 20               .word   START
+0285   FFFA E0 20               .word   START
+0286   FFFC E0 20               .word   START
+0287   FFFE E0 20               .word   START
+0288   10000             
+0289   10000                     .end
+0290   10000             
+0291   10000             
 tasm: Number of errors = 0
