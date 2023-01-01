@@ -19,7 +19,7 @@ In addition, it can identify the type of chip by determining the following param
 
 # Instructions:
 
-- Program a 4K 2732-compatible EPROM or FLASH chip with the dumperrom.bin (Trojan program)
+- Program a 4K 2732-compatible EPROM or FLASH chip with the dumper.bin (Trojan program)
 - Program the Arduino Nano with the sketch dumper7k.ino
 - Connect via serial terminal, baud rate 115200, 8N1.
 - Follow the instructions on screen to identify the chip type and dump any internal rom as a Motorola S-Record format file to the screen

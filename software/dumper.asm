@@ -7,9 +7,7 @@
 ; Switched to Memory-Mapped I/O, added support for CT and Piggyback chips - 2022-December
 ;
 ; This code can be built with TASM Version 3.2:
-;   tasm -70 -g3 -fff -s -c dumper.asm dumper.bin
-; Then, to make the rom image, use:
-;   python makerom.py
+;   tasm -70 -g3 -s dumper.asm dumper.bin
 ;
 ; Dumper code for all TMS7000 series parts
 ;
@@ -233,6 +231,40 @@ NXTBYTE:
 DONE:
         JMP     DONE        ; loop forever
 
+        .FILL   $1100-$, $FF    ; Fill the rest of this 256 byte region
+
+        ; Now, create empty 256-byte regions for 4K pages $2000-$B000
+
+        .ORG    $2000
+        .FILL   $100,$FF
+
+        .ORG    $3000
+        .FILL   $100,$FF
+
+        .ORG    $4000
+        .FILL   $100,$FF
+
+        .ORG    $5000
+        .FILL   $100,$FF
+
+        .ORG    $6000
+        .FILL   $100,$FF
+
+        .ORG    $7000
+        .FILL   $100,$FF
+
+        .ORG    $8000
+        .FILL   $100,$FF
+
+        .ORG    $9000
+        .FILL   $100,$FF
+
+        .ORG    $A000
+        .FILL   $100,$FF
+
+        .ORG    $B000
+        .FILL   $100,$FF
+
 ; We fill the first 32 bytes of each of the last 4K regions with the high byte of the region
 ; (This shows up as the first 32 bytes in every 256 byte block of this region)
 ; We try to read them at the start of each 2K block, to determine if we are reading external or internal ROM
@@ -241,18 +273,23 @@ DONE:
         .ORG    $C000       ; External Memory in the last 16K
         .FILL   $20,$C0     ; If this data is read in Full Expansion mode at $C000, then this is not a 16K internal ROM chip
                             ; If this data is read in Full Expansion mode at $C800, then this is not a 14K internal ROM chip
+        .FILL   $C100-$,$FF ; Fill the rest of this 256-byte block
+
 
         .ORG    $D000       ; External Memory in the last 12K
         .FILL   $20,$D0     ; If this data is read in Full Expansion mode at $D000, then this is not a 12K internal ROM chip
                             ; If this data is read in Full Expansion mode at $D800, then this is not a 10K internal ROM chip
+        .FILL   $D100-$,$FF ; Fill the rest of this 256-byte block
 
         .ORG    $E000       ; External Memory in the last 8K
         .FILL   $20,$E0     ; If this data is read in Full Expansion mode at $E000, then this is not a 8K internal ROM chip
                             ; If this data is read in Full Expansion mode at $E800, then this is not a 6K internal ROM chip
+        .FILL   $E100-$,$FF ; Fill the rest of this 256-byte block
 
         .ORG    $FF00       ; External Memory in the last 4K
         .FILL   $20,$F0     ; If this data is read in Full Expansion mode at $F000, then this is not a 4K internal ROM chip
                             ; If this data is read in Full Expansion mode at $F800, then this is not a 2K internal ROM chip
+        .FILL   $FFF4-$,$FF ; Fill the gap up to the Vectors in this 256-byte block
 
         ; Vectors go here
 

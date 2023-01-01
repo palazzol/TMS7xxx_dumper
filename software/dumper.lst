@@ -7,358 +7,1252 @@
 0007   0000             ; Switched to Memory-Mapped I/O, added support for CT and Piggyback chips - 2022-December
 0008   0000             ;
 0009   0000             ; This code can be built with TASM Version 3.2:
-0010   0000             ;   tasm -70 -g3 -fff -s -c dumper.asm dumper.bin
-0011   0000             ; Then, to make the rom image, use:
-0012   0000             ;   python makerom.py
+0010   0000             ;   tasm -70 -g3 -s dumper.asm dumper.bin
+0011   0000             ;
+0012   0000             ; Dumper code for all TMS7000 series parts
 0013   0000             ;
-0014   0000             ; Dumper code for all TMS7000 series parts
+0014   0000             ; Hardware connections:
 0015   0000             ;
-0016   0000             ; Hardware connections:
-0017   0000             ;
-0018   0000             ; ~INT1 and ~INT3 wired to +5 - pins 13 and 12 on DIP
-0019   0000             ; Arduino can be written to by writing to any external memory address (code uses 0x1000)
-0020   0000             ; MC set to Vcc on startup by Arduino
-0021   0000             ; First write of 0x55 signals Arduino to flip MC from high to low
-0022   0000             ; Second write to Arduino is the ChipID byte
-0023   0000             ; Subsequent writes are dumps of Internal ROM
-0024   0000             ;   (length is dependant on the ChipID byte)
+0016   0000             ; ~INT1 and ~INT3 wired to +5 - pins 13 and 12 on DIP
+0017   0000             ; Arduino can be written to by writing to any external memory address (code uses 0x1000)
+0018   0000             ; MC set to Vcc on startup by Arduino
+0019   0000             ; First write of 0x55 signals Arduino to flip MC from high to low
+0020   0000             ; Second write to Arduino is the ChipID byte
+0021   0000             ; Subsequent writes are dumps of Internal ROM
+0022   0000             ;   (length is dependant on the ChipID byte)
+0023   0000             ;
+0024   0000             ; When External Memory is enabled:
 0025   0000             ;
-0026   0000             ; When External Memory is enabled:
-0027   0000             ;
-0028   0000             ; Port B, bit 4 - Pin 38 on DIP - ALATCH
-0029   0000             ; Port B, bit 5 - Pin 1 on DIP  - R/~W 
-0030   0000             ; Port B, bit 6 - Pin 39 on DIP - ~ENABLE
-0031   0000             ; Port B, bit 7 - Pin 2 on DIP  - CLKOUT 
-0032   0000             ; Port C, all   - Address Low / Data Bus
-0033   0000             ; Port D, all*  - Address High Bus
-0034   0000             ; NOTE: Since the CT chips only have the upper 4 bits of Port D,
-0035   0000             ; We have mapped external memory such that every 4K block of TMS7000 space
-0036   0000             ; contains 16 copies of a single 256 byte block of the ROM chip
-0037   0000             ;
-0038   0000             ; Chip starts up in Microprocessor mode, executing ROM from external memory
-0039   0000             ; 1) Boots to 0x1000 - Code checks ram size and for presence of serial port, to generate initial ID byte
-0040   0000             ; 2) Trojan Code segment is copied from external ROM to internal RAM
-0041   0000             ; 3) Jump to code in internal RAM 
-0042   0000             ; 4) RAM-resident code sends Arduino a 0x55 to switch modes, enabling internal ROM
-0043   0000             ; 5) Jump back to external ROM
-0044   0000             ; 6) Code determines internal ROM size and adjusts ID byte
-0045   0000             ; 7) Code writes out bytes to Arduino:
-0046   0000             ;    ID byte, followed by internal ROM bytes
-0047   0000             
-0048   0000             ; RAM Layout
-0049   0000             ; 0x00-0x07 - A,B,R2-R7 Used as general purpose storage
-0050   0000             ; 0x08-0x18 - Reserved for Trojan program
-0051   0000             ; 0x19-0x7E - Spare
-0052   0000             ; 0x7F      - used to determine RAM size
-0053   0000             
-0054   0000             ; ID Byte bit definition:
-0055   0000             ;
-0056   0000             ; bit 0:    0 = No Serial Port, 1 = Serial Port detected
-0057   0000             ; bit 1:    0 = 128 bytes of RAM, 1 = 256 bytes of RAM
-0058   0000             ; bits 2-5: number of 2K blocks of Internal ROM present (0-8) = (0K-16K)
-0059   0000             ; bits 6-7: unused
-0060   0000             
-0061   0000             ;R0      .equ    0   ; AKA A Register
-0062   0000             ;R1      .equ    1   ; AKA B Register
-0063   0000             
-0064   0000             R2      .equ    2   ; Used as a Counter variable
-0065   0000             R3      .equ    3   ; Used for ID byte
-0066   0000             R4      .equ    4   ; R4:R5 used as primary 2-byte Memory Index
-0067   0000             R5      .equ    5
-0068   0000             R6      .equ    6   ; R6:R7 used as secondary 2-byte Memory Index
-0069   0000             R7      .equ    7
+0026   0000             ; Port B, bit 4 - Pin 38 on DIP - ALATCH
+0027   0000             ; Port B, bit 5 - Pin 1 on DIP  - R/~W 
+0028   0000             ; Port B, bit 6 - Pin 39 on DIP - ~ENABLE
+0029   0000             ; Port B, bit 7 - Pin 2 on DIP  - CLKOUT 
+0030   0000             ; Port C, all   - Address Low / Data Bus
+0031   0000             ; Port D, all*  - Address High Bus
+0032   0000             ; NOTE: Since the CT chips only have the upper 4 bits of Port D,
+0033   0000             ; We have mapped external memory such that every 4K block of TMS7000 space
+0034   0000             ; contains 16 copies of a single 256 byte block of the ROM chip
+0035   0000             ;
+0036   0000             ; Chip starts up in Microprocessor mode, executing ROM from external memory
+0037   0000             ; 1) Boots to 0x1000 - Code checks ram size and for presence of serial port, to generate initial ID byte
+0038   0000             ; 2) Trojan Code segment is copied from external ROM to internal RAM
+0039   0000             ; 3) Jump to code in internal RAM 
+0040   0000             ; 4) RAM-resident code sends Arduino a 0x55 to switch modes, enabling internal ROM
+0041   0000             ; 5) Jump back to external ROM
+0042   0000             ; 6) Code determines internal ROM size and adjusts ID byte
+0043   0000             ; 7) Code writes out bytes to Arduino:
+0044   0000             ;    ID byte, followed by internal ROM bytes
+0045   0000             
+0046   0000             ; RAM Layout
+0047   0000             ; 0x00-0x07 - A,B,R2-R7 Used as general purpose storage
+0048   0000             ; 0x08-0x18 - Reserved for Trojan program
+0049   0000             ; 0x19-0x7E - Spare
+0050   0000             ; 0x7F      - used to determine RAM size
+0051   0000             
+0052   0000             ; ID Byte bit definition:
+0053   0000             ;
+0054   0000             ; bit 0:    0 = No Serial Port, 1 = Serial Port detected
+0055   0000             ; bit 1:    0 = 128 bytes of RAM, 1 = 256 bytes of RAM
+0056   0000             ; bits 2-5: number of 2K blocks of Internal ROM present (0-8) = (0K-16K)
+0057   0000             ; bits 6-7: unused
+0058   0000             
+0059   0000             ;R0      .equ    0   ; AKA A Register
+0060   0000             ;R1      .equ    1   ; AKA B Register
+0061   0000             
+0062   0000             R2      .equ    2   ; Used as a Counter variable
+0063   0000             R3      .equ    3   ; Used for ID byte
+0064   0000             R4      .equ    4   ; R4:R5 used as primary 2-byte Memory Index
+0065   0000             R5      .equ    5
+0066   0000             R6      .equ    6   ; R6:R7 used as secondary 2-byte Memory Index
+0067   0000             R7      .equ    7
+0068   0000             
+0069   0000             ; peripherals
 0070   0000             
-0071   0000             ; peripherals
-0072   0000             
-0073   0000             IOCNT0  .equ    0       ; Peripheral address to control CPU modes
-0074   0000             ARDADDR .equ    $1000   ; Address to write a byte to the Arduino
-0075   0000             SCTL1   .equ    21      ; Peripheral address to probe for a Serial Port on the 70x2
-0076   0000             SCTL1C  .equ    24      ; Peripheral address to probe for a Serial Port on the 70Cx2
+0071   0000             IOCNT0  .equ    0       ; Peripheral address to control CPU modes
+0072   0000             ARDADDR .equ    $1000   ; Address to write a byte to the Arduino
+0073   0000             SCTL1   .equ    21      ; Peripheral address to probe for a Serial Port on the 70x2
+0074   0000             SCTL1C  .equ    24      ; Peripheral address to probe for a Serial Port on the 70Cx2
+0075   0000             
+0076   0000             RAMDEST .equ    $0008       ; location in ram for the code to be copied into and run from
 0077   0000             
-0078   0000             RAMDEST .equ    $0008       ; location in ram for the code to be copied into and run from
-0079   0000             
-0080   0000             ; Binary image Layout:
-0081   0000             ; We fill 64K of space with this program, but we only use 4K of it in the ROM
-0082   0000             ; Each 4K block contains only 256 bytes of info
+0078   0000             ; Binary image Layout:
+0079   0000             ; We fill 64K of space with this program, but we only use 4K of it in the ROM
+0080   0000             ; Each 4K block contains only 256 bytes of info
+0081   0000             
+0082   0000             ; 0x0X00 is unused.  The first 256 bytes will appear in the ROM
 0083   0000             
-0084   0000             ; 0x0X00 is unused.  The first 256 bytes will appear in the ROM
-0085   0000             
-0086   0000                     .ORG    $0000       ; nothing here, fill with zeros
-0087   0000 00 00 00 00         .FILL   $100,$00
-0087   0004 00 00 00 00 
-0087   0008 00 00 00 00 
-0087   000C 00 00 00 00 
-0087   0010 00 00 00 00 
-0087   0014 00 00 00 00 
-0087   0018 00 00 00 00 
-0087   001C 00 00 00 00 
-0087   0020 00 00 00 00 
-0087   0024 00 00 00 00 
-0087   0028 00 00 00 00 
-0087   002C 00 00 00 00 
-0087   0030 00 00 00 00 
-0087   0034 00 00 00 00 
-0087   0038 00 00 00 00 
-0087   003C 00 00 00 00 
-0087   0040 00 00 00 00 
-0087   0044 00 00 00 00 
-0087   0048 00 00 00 00 
-0087   004C 00 00 00 00 
-0087   0050 00 00 00 00 
-0087   0054 00 00 00 00 
-0087   0058 00 00 00 00 
-0087   005C 00 00 00 00 
-0087   0060 00 00 00 00 
-0087   0064 00 00 00 00 
-0087   0068 00 00 00 00 
-0087   006C 00 00 00 00 
-0087   0070 00 00 00 00 
-0087   0074 00 00 00 00 
-0087   0078 00 00 00 00 
-0087   007C 00 00 00 00 
-0087   0080 00 00 00 00 
-0087   0084 00 00 00 00 
-0087   0088 00 00 00 00 
-0087   008C 00 00 00 00 
-0087   0090 00 00 00 00 
-0087   0094 00 00 00 00 
-0087   0098 00 00 00 00 
-0087   009C 00 00 00 00 
-0087   00A0 00 00 00 00 
-0087   00A4 00 00 00 00 
-0087   00A8 00 00 00 00 
-0087   00AC 00 00 00 00 
-0087   00B0 00 00 00 00 
-0087   00B4 00 00 00 00 
-0087   00B8 00 00 00 00 
-0087   00BC 00 00 00 00 
-0087   00C0 00 00 00 00 
-0087   00C4 00 00 00 00 
-0087   00C8 00 00 00 00 
-0087   00CC 00 00 00 00 
-0087   00D0 00 00 00 00 
-0087   00D4 00 00 00 00 
-0087   00D8 00 00 00 00 
-0087   00DC 00 00 00 00 
-0087   00E0 00 00 00 00 
-0087   00E4 00 00 00 00 
-0087   00E8 00 00 00 00 
-0087   00EC 00 00 00 00 
-0087   00F0 00 00 00 00 
-0087   00F4 00 00 00 00 
-0087   00F8 00 00 00 00 
-0087   00FC 00 00 00 00 
+0084   0000                     .ORG    $0000       ; nothing here, fill with zeros
+0085   0000 00 00 00 00         .FILL   $100,$00
+0085   0004 00 00 00 00 
+0085   0008 00 00 00 00 
+0085   000C 00 00 00 00 
+0085   0010 00 00 00 00 
+0085   0014 00 00 00 00 
+0085   0018 00 00 00 00 
+0085   001C 00 00 00 00 
+0085   0020 00 00 00 00 
+0085   0024 00 00 00 00 
+0085   0028 00 00 00 00 
+0085   002C 00 00 00 00 
+0085   0030 00 00 00 00 
+0085   0034 00 00 00 00 
+0085   0038 00 00 00 00 
+0085   003C 00 00 00 00 
+0085   0040 00 00 00 00 
+0085   0044 00 00 00 00 
+0085   0048 00 00 00 00 
+0085   004C 00 00 00 00 
+0085   0050 00 00 00 00 
+0085   0054 00 00 00 00 
+0085   0058 00 00 00 00 
+0085   005C 00 00 00 00 
+0085   0060 00 00 00 00 
+0085   0064 00 00 00 00 
+0085   0068 00 00 00 00 
+0085   006C 00 00 00 00 
+0085   0070 00 00 00 00 
+0085   0074 00 00 00 00 
+0085   0078 00 00 00 00 
+0085   007C 00 00 00 00 
+0085   0080 00 00 00 00 
+0085   0084 00 00 00 00 
+0085   0088 00 00 00 00 
+0085   008C 00 00 00 00 
+0085   0090 00 00 00 00 
+0085   0094 00 00 00 00 
+0085   0098 00 00 00 00 
+0085   009C 00 00 00 00 
+0085   00A0 00 00 00 00 
+0085   00A4 00 00 00 00 
+0085   00A8 00 00 00 00 
+0085   00AC 00 00 00 00 
+0085   00B0 00 00 00 00 
+0085   00B4 00 00 00 00 
+0085   00B8 00 00 00 00 
+0085   00BC 00 00 00 00 
+0085   00C0 00 00 00 00 
+0085   00C4 00 00 00 00 
+0085   00C8 00 00 00 00 
+0085   00CC 00 00 00 00 
+0085   00D0 00 00 00 00 
+0085   00D4 00 00 00 00 
+0085   00D8 00 00 00 00 
+0085   00DC 00 00 00 00 
+0085   00E0 00 00 00 00 
+0085   00E4 00 00 00 00 
+0085   00E8 00 00 00 00 
+0085   00EC 00 00 00 00 
+0085   00F0 00 00 00 00 
+0085   00F4 00 00 00 00 
+0085   00F8 00 00 00 00 
+0085   00FC 00 00 00 00 
+0086   0100             
+0087   0100             ; 0x1X00 contains the code block.  Only 256 bytes are available.
 0088   0100             
-0089   0100             ; 0x1X00 contains the code block.  Only 256 bytes are available.
-0090   0100             
-0091   1000                     .ORG    $1000
-0092   1000             
-0093   1000                     ; Initialize port, stack
-0094   1000             START:
-0095   1000 52 0C               MOV     %$0C,B      ; B  = 0C
-0096   1002 0D                  LDSP                ; SP = 000C - we don't use stack anyway
-0097   1003 A2 AA 00            MOVP    %$AA,IOCNT0 ; Disable some interrupts, set for Full Expansion mode after mode switch
-0098   1006             
-0099   1006                     ; Try to identify this chip and store a code in R3
-0100   1006 72 00 03            MOV     %$00,R3     ; Initialize ID byte to 0, (128 bytes of RAM)
-0101   1009             
-0102   1009             RAMCHK:
-0103   1009                     ; Identify RAM size:
-0104   1009                     ; do checks twice with different data,
-0105   1009                     ; to protect against random luck matches
-0106   1009             
-0107   1009 72 55 FF            MOV     %$55,$ff
-0108   100C 72 AA 7F            MOV     %$AA,$7f
-0109   100F 7D 55 FF            CMP     %$55,$ff    ; check for 256 bytes working
-0110   1012 E6 0E               JNZ     SERCHK      ; if fail, 128 bytes - jump to next step
-0111   1014 72 AA FF            MOV     %$AA,$ff
-0112   1017 72 55 7F            MOV     %$55,$7f
-0113   101A 7D AA FF            CMP     %$AA,$ff    ; doublecheck for 256 bytes working
-0114   101D E6 03               JNZ     SERCHK      ; if fail, 128 bytes - jump to next step
-0115   101F             
-0116   101F             RAM256:
-0117   101F 72 02 03            MOV     %$02,R3     ; We have 256 bytes or RAM
-0118   1022             
-0119   1022                     ; Try to store bottom two bits of SCTL1 register and see if they "stay"
-0120   1022                     ; if so, we have a UART
-0121   1022                     ; We try both the locations, once for the 70X2 chip, and then the 70CX2 chip
-0122   1022             
-0123   1022             SERCHK:
-0124   1022 A3 FC 15            ANDP    %$FC,SCTL1  ; zero the 2 LS bits
-0125   1025 80 15               MOVP    SCTL1,A
-0126   1027 23 03               AND     %$03,A
-0127   1029 E6 16               JNZ     SERCHKC     ; fail if not zero
-0128   102B A4 01 15            ORP     %$01,SCTL1  ; set the bottom bit
-0129   102E 80 15               MOVP    SCTL1,A
-0130   1030 23 03               AND     %$03,A 
-0131   1032 2D 01               CMP     %$01,A      ; check if it's a one now
-0132   1034 E6 0B               JNZ     SERCHKC     ; or fail
-0133   1036 A4 02 15            ORP     %$02,SCTL1  ; set the next bit
-0134   1039 80 15               MOVP    SCTL1,A
-0135   103B 23 03               AND     %$03,A 
-0136   103D 2D 03               CMP     %$03,A      ; should be 3 now
-0137   103F E2 1F               JZ      SERFOUND    ; if not fail
-0138   1041             
-0139   1041             SERCHKC:
-0140   1041 A3 FC 18            ANDP    %$FC,SCTL1C  ; zero the 2 LS bits
-0141   1044 80 18               MOVP    SCTL1C,A
-0142   1046 23 03               AND     %$03,A
-0143   1048 E6 19               JNZ     COPYCODE     ; fail if not zero
-0144   104A A4 01 18            ORP     %$01,SCTL1C  ; set the bottom bit
-0145   104D 80 18               MOVP    SCTL1C,A
-0146   104F 23 03               AND     %$03,A 
-0147   1051 2D 01               CMP     %$01,A       ; check if it's a one now
-0148   1053 E6 0E               JNZ     COPYCODE     ; or fail
-0149   1055 A4 02 18            ORP     %$02,SCTL1C  ; set the next bit
-0150   1058 80 18               MOVP    SCTL1C,A
-0151   105A 23 03               AND     %$03,A 
-0152   105C 2D 03               CMP     %$03,A       ; should be 3 now
-0153   105E E6 03               JNZ     COPYCODE     ; if not fail
-0154   1060             SERFOUND:
-0155   1060 74 01 03            OR      %$01,R3     ; UART detected, set this bit
+0089   1000                     .ORG    $1000
+0090   1000             
+0091   1000                     ; Initialize port, stack
+0092   1000             START:
+0093   1000 52 0C               MOV     %$0C,B      ; B  = 0C
+0094   1002 0D                  LDSP                ; SP = 000C - we don't use stack anyway
+0095   1003 A2 AA 00            MOVP    %$AA,IOCNT0 ; Disable some interrupts, set for Full Expansion mode after mode switch
+0096   1006             
+0097   1006                     ; Try to identify this chip and store a code in R3
+0098   1006 72 00 03            MOV     %$00,R3     ; Initialize ID byte to 0, (128 bytes of RAM)
+0099   1009             
+0100   1009             RAMCHK:
+0101   1009                     ; Identify RAM size:
+0102   1009                     ; do checks twice with different data,
+0103   1009                     ; to protect against random luck matches
+0104   1009             
+0105   1009 72 55 FF            MOV     %$55,$ff
+0106   100C 72 AA 7F            MOV     %$AA,$7f
+0107   100F 7D 55 FF            CMP     %$55,$ff    ; check for 256 bytes working
+0108   1012 E6 0E               JNZ     SERCHK      ; if fail, 128 bytes - jump to next step
+0109   1014 72 AA FF            MOV     %$AA,$ff
+0110   1017 72 55 7F            MOV     %$55,$7f
+0111   101A 7D AA FF            CMP     %$AA,$ff    ; doublecheck for 256 bytes working
+0112   101D E6 03               JNZ     SERCHK      ; if fail, 128 bytes - jump to next step
+0113   101F             
+0114   101F             RAM256:
+0115   101F 72 02 03            MOV     %$02,R3     ; We have 256 bytes or RAM
+0116   1022             
+0117   1022                     ; Try to store bottom two bits of SCTL1 register and see if they "stay"
+0118   1022                     ; if so, we have a UART
+0119   1022                     ; We try both the locations, once for the 70X2 chip, and then the 70CX2 chip
+0120   1022             
+0121   1022             SERCHK:
+0122   1022 A3 FC 15            ANDP    %$FC,SCTL1  ; zero the 2 LS bits
+0123   1025 80 15               MOVP    SCTL1,A
+0124   1027 23 03               AND     %$03,A
+0125   1029 E6 16               JNZ     SERCHKC     ; fail if not zero
+0126   102B A4 01 15            ORP     %$01,SCTL1  ; set the bottom bit
+0127   102E 80 15               MOVP    SCTL1,A
+0128   1030 23 03               AND     %$03,A 
+0129   1032 2D 01               CMP     %$01,A      ; check if it's a one now
+0130   1034 E6 0B               JNZ     SERCHKC     ; or fail
+0131   1036 A4 02 15            ORP     %$02,SCTL1  ; set the next bit
+0132   1039 80 15               MOVP    SCTL1,A
+0133   103B 23 03               AND     %$03,A 
+0134   103D 2D 03               CMP     %$03,A      ; should be 3 now
+0135   103F E2 1F               JZ      SERFOUND    ; if not fail
+0136   1041             
+0137   1041             SERCHKC:
+0138   1041 A3 FC 18            ANDP    %$FC,SCTL1C  ; zero the 2 LS bits
+0139   1044 80 18               MOVP    SCTL1C,A
+0140   1046 23 03               AND     %$03,A
+0141   1048 E6 19               JNZ     COPYCODE     ; fail if not zero
+0142   104A A4 01 18            ORP     %$01,SCTL1C  ; set the bottom bit
+0143   104D 80 18               MOVP    SCTL1C,A
+0144   104F 23 03               AND     %$03,A 
+0145   1051 2D 01               CMP     %$01,A       ; check if it's a one now
+0146   1053 E6 0E               JNZ     COPYCODE     ; or fail
+0147   1055 A4 02 18            ORP     %$02,SCTL1C  ; set the next bit
+0148   1058 80 18               MOVP    SCTL1C,A
+0149   105A 23 03               AND     %$03,A 
+0150   105C 2D 03               CMP     %$03,A       ; should be 3 now
+0151   105E E6 03               JNZ     COPYCODE     ; if not fail
+0152   1060             SERFOUND:
+0153   1060 74 01 03            OR      %$01,R3     ; UART detected, set this bit
+0154   1063             
+0155   1063                     ; Copy code from External ROM to RAM
 0156   1063             
-0157   1063                     ; Copy code from External ROM to RAM
-0158   1063             
-0159   1063             COPYCODE:
-0160   1063 72 10 02            MOV     %$10,R2     ; Byte Counter - our code is < 16 bytes
-0161   1066 88 10 83 05         MOVD    %RAMCODE,R5 ; Start of ROM source
-0162   106A 88 00 08 07         MOVD    %RAMDEST,R7 ; Start of RAM destination
-0163   106E             CPYLOOP:
-0164   106E 9A 05               LDA     *R5         ; grab code byte
-0165   1070 9B 07               STA     *R7         ; move code byte
-0166   1072 D3 07               INC     R7          ; increment destination
-0167   1074 79 00 06            ADC     %$0,R6      ; ripple carry to high byte
-0168   1077 D3 05               INC     R5          ; increment source
-0169   1079 79 00 04            ADC     %$0,R4      ; ripple carry to high byte
-0170   107C D2 02               DEC     R2          ; done yet?
-0171   107E E6 EE               JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
-0172   1080                     ; our code copy to RAM is done
-0173   1080 8C 00 08            BR      @RAMDEST    ; jump to code in RAM
-0174   1083             
-0175   1083             ; Start of code to be executed in RAM
-0176   1083             ; (Must be relocatable)
-0177   1083             
-0178   1083             RAMCODE:
-0179   1083 22 55               MOV     %$55,A      ; Byte signifying request to switch modes
-0180   1085 8B 10 00            STA     @ARDADDR    ; switch modes
-0181   1088 52 FF               MOV     %$FF,B      ; B = FF
-0182   108A             DELAY:
-0183   108A C2                  DEC     B           ; B = B-1
-0184   108B E6 FD               JNZ     DELAY       ; wait a bit for things to settle
-0185   108D 8C 10 90            BR      @BACK2ROM
+0157   1063             COPYCODE:
+0158   1063 72 10 02            MOV     %$10,R2     ; Byte Counter - our code is < 16 bytes
+0159   1066 88 10 83 05         MOVD    %RAMCODE,R5 ; Start of ROM source
+0160   106A 88 00 08 07         MOVD    %RAMDEST,R7 ; Start of RAM destination
+0161   106E             CPYLOOP:
+0162   106E 9A 05               LDA     *R5         ; grab code byte
+0163   1070 9B 07               STA     *R7         ; move code byte
+0164   1072 D3 07               INC     R7          ; increment destination
+0165   1074 79 00 06            ADC     %$0,R6      ; ripple carry to high byte
+0166   1077 D3 05               INC     R5          ; increment source
+0167   1079 79 00 04            ADC     %$0,R4      ; ripple carry to high byte
+0168   107C D2 02               DEC     R2          ; done yet?
+0169   107E E6 EE               JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
+0170   1080                     ; our code copy to RAM is done
+0171   1080 8C 00 08            BR      @RAMDEST    ; jump to code in RAM
+0172   1083             
+0173   1083             ; Start of code to be executed in RAM
+0174   1083             ; (Must be relocatable)
+0175   1083             
+0176   1083             RAMCODE:
+0177   1083 22 55               MOV     %$55,A      ; Byte signifying request to switch modes
+0178   1085 8B 10 00            STA     @ARDADDR    ; switch modes
+0179   1088 52 FF               MOV     %$FF,B      ; B = FF
+0180   108A             DELAY:
+0181   108A C2                  DEC     B           ; B = B-1
+0182   108B E6 FD               JNZ     DELAY       ; wait a bit for things to settle
+0183   108D 8C 10 90            BR      @BACK2ROM
+0184   1090             
+0185   1090             ;   Determine internal ROM size
 0186   1090             
-0187   1090             ;   Determine internal ROM size
-0188   1090             
-0189   1090             BACK2ROM:
-0190   1090 72 08 02            MOV     %$08,R2     ; Number of 2K pages
-0191   1093 88 C0 00 05         MOVD    %$C000,R5   ; Start of 16K ROM
-0192   1097 9A 05       CHKNXT: LDA     *R5
-0193   1099 32 04               MOV     R4,B        ; expected byte might have a bit 3 set, but we need to reset it
-0194   109B 53 F7               AND     %$F7,B      ; before comparing to the byte read from ROM
-0195   109D 6D                  CMP     B,A         ; expected byte in B if reading external memory
-0196   109E E6 11               JNZ     FINISHUP
-0197   10A0 D3 05               INC     R5
-0198   10A2 7D 20 05            CMP     %$20,R5     ; done checking 32 bytes?
-0199   10A5 E6 F0               JNZ     CHKNXT
-0200   10A7 72 00 05            MOV     %$0,R5      ; if so, start next 2K region, + 0x0800
-0201   10AA D2 02               DEC     R2          ; but first, subtract 1 from num of 2K regions
-0202   10AC 78 08 04            ADD     %$8,R4
-0203   10AF E6 E6               JNZ     CHKNXT      ; done with all regions?
-0204   10B1             
-0205   10B1             FINISHUP:
-0206   10B1                     ; Update R3 with # of 2K pages from R2
-0207   10B1 B0                  CLRC                ; put 2K page counter into bits 2,3,4,5
-0208   10B2 DE 02               RL      R2
-0209   10B4 DE 02               RL      R2
-0210   10B6 48 02 03            ADD     R2,R3       ; add to ID byte in the right place
-0211   10B9             
-0212   10B9                     ; at this point:
-0213   10B9                     ;   R3 is the complete ID byte
-0214   10B9                     ;   R4 is the high byte of the start of internal rom to dump 
-0215   10B9                     ;     (or 00)
-0216   10B9 72 00 05            MOV     %$00,R5     ; now R4:R5 is the start of internal ROM (or 0000)
-0217   10BC             
-0218   10BC             SENDID:
-0219   10BC 12 03               MOV     R3,A
-0220   10BE 8B 10 00            STA     @ARDADDR    ; send ID byte to the arduino
-0221   10C1             
-0222   10C1 7D 00 04            CMP     %$00,R4     ; check if no internal rom
-0223   10C4 E2 0C               JZ      DONE
-0224   10C6             
-0225   10C6             NXTBYTE:
-0226   10C6 9A 05               LDA     *R5         ; Read internal ROM byte
-0227   10C8 8B 10 00            STA     @ARDADDR    ; send a byte to the arduino
-0228   10CB             
-0229   10CB D3 05               INC     R5          ; increment for next location to read
-0230   10CD 79 00 04            ADC     %$0,R4
-0231   10D0 E6 F4               JNZ     NXTBYTE     ; unless we roll over to 0000, do next byte
-0232   10D2             
-0233   10D2             DONE:
-0234   10D2 E0 FE               JMP     DONE        ; loop forever
-0235   10D4             
-0236   10D4             ; We fill the first 32 bytes of each of the last 4K regions with the high byte of the region
-0237   10D4             ; (This shows up as the first 32 bytes in every 256 byte block of this region)
-0238   10D4             ; We try to read them at the start of each 2K block, to determine if we are reading external or internal ROM
-0239   10D4             ; In this way, we determine how much internal ROM there is
-0240   10D4             
-0241   C000                     .ORG    $C000       ; External Memory in the last 16K
-0242   C000 C0 C0 C0 C0         .FILL   $20,$C0     ; If this data is read in Full Expansion mode at $C000, then this is not a 16K internal ROM chip
-0242   C004 C0 C0 C0 C0 
-0242   C008 C0 C0 C0 C0 
-0242   C00C C0 C0 C0 C0 
-0242   C010 C0 C0 C0 C0 
-0242   C014 C0 C0 C0 C0 
-0242   C018 C0 C0 C0 C0 
-0242   C01C C0 C0 C0 C0 
-0243   C020                                         ; If this data is read in Full Expansion mode at $C800, then this is not a 14K internal ROM chip
-0244   C020             
-0245   D000                     .ORG    $D000       ; External Memory in the last 12K
-0246   D000 D0 D0 D0 D0         .FILL   $20,$D0     ; If this data is read in Full Expansion mode at $D000, then this is not a 12K internal ROM chip
-0246   D004 D0 D0 D0 D0 
-0246   D008 D0 D0 D0 D0 
-0246   D00C D0 D0 D0 D0 
-0246   D010 D0 D0 D0 D0 
-0246   D014 D0 D0 D0 D0 
-0246   D018 D0 D0 D0 D0 
-0246   D01C D0 D0 D0 D0 
-0247   D020                                         ; If this data is read in Full Expansion mode at $D800, then this is not a 10K internal ROM chip
-0248   D020             
-0249   E000                     .ORG    $E000       ; External Memory in the last 8K
-0250   E000 E0 E0 E0 E0         .FILL   $20,$E0     ; If this data is read in Full Expansion mode at $E000, then this is not a 8K internal ROM chip
-0250   E004 E0 E0 E0 E0 
-0250   E008 E0 E0 E0 E0 
-0250   E00C E0 E0 E0 E0 
-0250   E010 E0 E0 E0 E0 
-0250   E014 E0 E0 E0 E0 
-0250   E018 E0 E0 E0 E0 
-0250   E01C E0 E0 E0 E0 
-0251   E020                                         ; If this data is read in Full Expansion mode at $E800, then this is not a 6K internal ROM chip
-0252   E020             
-0253   FF00                     .ORG    $FF00       ; External Memory in the last 4K
-0254   FF00 F0 F0 F0 F0         .FILL   $20,$F0     ; If this data is read in Full Expansion mode at $F000, then this is not a 4K internal ROM chip
-0254   FF04 F0 F0 F0 F0 
-0254   FF08 F0 F0 F0 F0 
-0254   FF0C F0 F0 F0 F0 
-0254   FF10 F0 F0 F0 F0 
-0254   FF14 F0 F0 F0 F0 
-0254   FF18 F0 F0 F0 F0 
-0254   FF1C F0 F0 F0 F0 
-0255   FF20                                         ; If this data is read in Full Expansion mode at $F800, then this is not a 2K internal ROM chip
-0256   FF20             
-0257   FF20                     ; Vectors go here
-0258   FF20             
-0259   FFF4                     .ORG    $FFF4
-0260   FFF4             
-0261   FFF4                     .MSFIRST            ; need this, or .word statements are backwards for this CPU!
-0262   FFF4             
-0263   FFF4 10 00               .word   START       ;  INT5 vector
-0264   FFF6 10 00               .word   START       ;  INT4 vector
-0265   FFF8 10 00               .word   START       ; ~INT3 vector
-0266   FFFA 10 00               .word   START       ;  INT2 vector
-0267   FFFC 10 00               .word   START       ; ~INT1 vector
-0268   FFFE 10 00               .word   START       ; ~RESET vector
-0269   10000             
-0270   10000                     .end
-0271   10000             
-0272   10000             
+0187   1090             BACK2ROM:
+0188   1090 72 08 02            MOV     %$08,R2     ; Number of 2K pages
+0189   1093 88 C0 00 05         MOVD    %$C000,R5   ; Start of 16K ROM
+0190   1097 9A 05       CHKNXT: LDA     *R5
+0191   1099 32 04               MOV     R4,B        ; expected byte might have a bit 3 set, but we need to reset it
+0192   109B 53 F7               AND     %$F7,B      ; before comparing to the byte read from ROM
+0193   109D 6D                  CMP     B,A         ; expected byte in B if reading external memory
+0194   109E E6 11               JNZ     FINISHUP
+0195   10A0 D3 05               INC     R5
+0196   10A2 7D 20 05            CMP     %$20,R5     ; done checking 32 bytes?
+0197   10A5 E6 F0               JNZ     CHKNXT
+0198   10A7 72 00 05            MOV     %$0,R5      ; if so, start next 2K region, + 0x0800
+0199   10AA D2 02               DEC     R2          ; but first, subtract 1 from num of 2K regions
+0200   10AC 78 08 04            ADD     %$8,R4
+0201   10AF E6 E6               JNZ     CHKNXT      ; done with all regions?
+0202   10B1             
+0203   10B1             FINISHUP:
+0204   10B1                     ; Update R3 with # of 2K pages from R2
+0205   10B1 B0                  CLRC                ; put 2K page counter into bits 2,3,4,5
+0206   10B2 DE 02               RL      R2
+0207   10B4 DE 02               RL      R2
+0208   10B6 48 02 03            ADD     R2,R3       ; add to ID byte in the right place
+0209   10B9             
+0210   10B9                     ; at this point:
+0211   10B9                     ;   R3 is the complete ID byte
+0212   10B9                     ;   R4 is the high byte of the start of internal rom to dump 
+0213   10B9                     ;     (or 00)
+0214   10B9 72 00 05            MOV     %$00,R5     ; now R4:R5 is the start of internal ROM (or 0000)
+0215   10BC             
+0216   10BC             SENDID:
+0217   10BC 12 03               MOV     R3,A
+0218   10BE 8B 10 00            STA     @ARDADDR    ; send ID byte to the arduino
+0219   10C1             
+0220   10C1 7D 00 04            CMP     %$00,R4     ; check if no internal rom
+0221   10C4 E2 0C               JZ      DONE
+0222   10C6             
+0223   10C6             NXTBYTE:
+0224   10C6 9A 05               LDA     *R5         ; Read internal ROM byte
+0225   10C8 8B 10 00            STA     @ARDADDR    ; send a byte to the arduino
+0226   10CB             
+0227   10CB D3 05               INC     R5          ; increment for next location to read
+0228   10CD 79 00 04            ADC     %$0,R4
+0229   10D0 E6 F4               JNZ     NXTBYTE     ; unless we roll over to 0000, do next byte
+0230   10D2             
+0231   10D2             DONE:
+0232   10D2 E0 FE               JMP     DONE        ; loop forever
+0233   10D4             
+0234   10D4 FF FF FF FF         .FILL   $1100-$, $FF    ; Fill the rest of this 256 byte region
+0234   10D8 FF FF FF FF 
+0234   10DC FF FF FF FF 
+0234   10E0 FF FF FF FF 
+0234   10E4 FF FF FF FF 
+0234   10E8 FF FF FF FF 
+0234   10EC FF FF FF FF 
+0234   10F0 FF FF FF FF 
+0234   10F4 FF FF FF FF 
+0234   10F8 FF FF FF FF 
+0234   10FC FF FF FF FF 
+0235   1100             
+0236   1100                     ; Now, create empty 256-byte regions for 4K pages $2000-$B000
+0237   1100             
+0238   2000                     .ORG    $2000
+0239   2000 FF FF FF FF         .FILL   $100,$FF
+0239   2004 FF FF FF FF 
+0239   2008 FF FF FF FF 
+0239   200C FF FF FF FF 
+0239   2010 FF FF FF FF 
+0239   2014 FF FF FF FF 
+0239   2018 FF FF FF FF 
+0239   201C FF FF FF FF 
+0239   2020 FF FF FF FF 
+0239   2024 FF FF FF FF 
+0239   2028 FF FF FF FF 
+0239   202C FF FF FF FF 
+0239   2030 FF FF FF FF 
+0239   2034 FF FF FF FF 
+0239   2038 FF FF FF FF 
+0239   203C FF FF FF FF 
+0239   2040 FF FF FF FF 
+0239   2044 FF FF FF FF 
+0239   2048 FF FF FF FF 
+0239   204C FF FF FF FF 
+0239   2050 FF FF FF FF 
+0239   2054 FF FF FF FF 
+0239   2058 FF FF FF FF 
+0239   205C FF FF FF FF 
+0239   2060 FF FF FF FF 
+0239   2064 FF FF FF FF 
+0239   2068 FF FF FF FF 
+0239   206C FF FF FF FF 
+0239   2070 FF FF FF FF 
+0239   2074 FF FF FF FF 
+0239   2078 FF FF FF FF 
+0239   207C FF FF FF FF 
+0239   2080 FF FF FF FF 
+0239   2084 FF FF FF FF 
+0239   2088 FF FF FF FF 
+0239   208C FF FF FF FF 
+0239   2090 FF FF FF FF 
+0239   2094 FF FF FF FF 
+0239   2098 FF FF FF FF 
+0239   209C FF FF FF FF 
+0239   20A0 FF FF FF FF 
+0239   20A4 FF FF FF FF 
+0239   20A8 FF FF FF FF 
+0239   20AC FF FF FF FF 
+0239   20B0 FF FF FF FF 
+0239   20B4 FF FF FF FF 
+0239   20B8 FF FF FF FF 
+0239   20BC FF FF FF FF 
+0239   20C0 FF FF FF FF 
+0239   20C4 FF FF FF FF 
+0239   20C8 FF FF FF FF 
+0239   20CC FF FF FF FF 
+0239   20D0 FF FF FF FF 
+0239   20D4 FF FF FF FF 
+0239   20D8 FF FF FF FF 
+0239   20DC FF FF FF FF 
+0239   20E0 FF FF FF FF 
+0239   20E4 FF FF FF FF 
+0239   20E8 FF FF FF FF 
+0239   20EC FF FF FF FF 
+0239   20F0 FF FF FF FF 
+0239   20F4 FF FF FF FF 
+0239   20F8 FF FF FF FF 
+0239   20FC FF FF FF FF 
+0240   2100             
+0241   3000                     .ORG    $3000
+0242   3000 FF FF FF FF         .FILL   $100,$FF
+0242   3004 FF FF FF FF 
+0242   3008 FF FF FF FF 
+0242   300C FF FF FF FF 
+0242   3010 FF FF FF FF 
+0242   3014 FF FF FF FF 
+0242   3018 FF FF FF FF 
+0242   301C FF FF FF FF 
+0242   3020 FF FF FF FF 
+0242   3024 FF FF FF FF 
+0242   3028 FF FF FF FF 
+0242   302C FF FF FF FF 
+0242   3030 FF FF FF FF 
+0242   3034 FF FF FF FF 
+0242   3038 FF FF FF FF 
+0242   303C FF FF FF FF 
+0242   3040 FF FF FF FF 
+0242   3044 FF FF FF FF 
+0242   3048 FF FF FF FF 
+0242   304C FF FF FF FF 
+0242   3050 FF FF FF FF 
+0242   3054 FF FF FF FF 
+0242   3058 FF FF FF FF 
+0242   305C FF FF FF FF 
+0242   3060 FF FF FF FF 
+0242   3064 FF FF FF FF 
+0242   3068 FF FF FF FF 
+0242   306C FF FF FF FF 
+0242   3070 FF FF FF FF 
+0242   3074 FF FF FF FF 
+0242   3078 FF FF FF FF 
+0242   307C FF FF FF FF 
+0242   3080 FF FF FF FF 
+0242   3084 FF FF FF FF 
+0242   3088 FF FF FF FF 
+0242   308C FF FF FF FF 
+0242   3090 FF FF FF FF 
+0242   3094 FF FF FF FF 
+0242   3098 FF FF FF FF 
+0242   309C FF FF FF FF 
+0242   30A0 FF FF FF FF 
+0242   30A4 FF FF FF FF 
+0242   30A8 FF FF FF FF 
+0242   30AC FF FF FF FF 
+0242   30B0 FF FF FF FF 
+0242   30B4 FF FF FF FF 
+0242   30B8 FF FF FF FF 
+0242   30BC FF FF FF FF 
+0242   30C0 FF FF FF FF 
+0242   30C4 FF FF FF FF 
+0242   30C8 FF FF FF FF 
+0242   30CC FF FF FF FF 
+0242   30D0 FF FF FF FF 
+0242   30D4 FF FF FF FF 
+0242   30D8 FF FF FF FF 
+0242   30DC FF FF FF FF 
+0242   30E0 FF FF FF FF 
+0242   30E4 FF FF FF FF 
+0242   30E8 FF FF FF FF 
+0242   30EC FF FF FF FF 
+0242   30F0 FF FF FF FF 
+0242   30F4 FF FF FF FF 
+0242   30F8 FF FF FF FF 
+0242   30FC FF FF FF FF 
+0243   3100             
+0244   4000                     .ORG    $4000
+0245   4000 FF FF FF FF         .FILL   $100,$FF
+0245   4004 FF FF FF FF 
+0245   4008 FF FF FF FF 
+0245   400C FF FF FF FF 
+0245   4010 FF FF FF FF 
+0245   4014 FF FF FF FF 
+0245   4018 FF FF FF FF 
+0245   401C FF FF FF FF 
+0245   4020 FF FF FF FF 
+0245   4024 FF FF FF FF 
+0245   4028 FF FF FF FF 
+0245   402C FF FF FF FF 
+0245   4030 FF FF FF FF 
+0245   4034 FF FF FF FF 
+0245   4038 FF FF FF FF 
+0245   403C FF FF FF FF 
+0245   4040 FF FF FF FF 
+0245   4044 FF FF FF FF 
+0245   4048 FF FF FF FF 
+0245   404C FF FF FF FF 
+0245   4050 FF FF FF FF 
+0245   4054 FF FF FF FF 
+0245   4058 FF FF FF FF 
+0245   405C FF FF FF FF 
+0245   4060 FF FF FF FF 
+0245   4064 FF FF FF FF 
+0245   4068 FF FF FF FF 
+0245   406C FF FF FF FF 
+0245   4070 FF FF FF FF 
+0245   4074 FF FF FF FF 
+0245   4078 FF FF FF FF 
+0245   407C FF FF FF FF 
+0245   4080 FF FF FF FF 
+0245   4084 FF FF FF FF 
+0245   4088 FF FF FF FF 
+0245   408C FF FF FF FF 
+0245   4090 FF FF FF FF 
+0245   4094 FF FF FF FF 
+0245   4098 FF FF FF FF 
+0245   409C FF FF FF FF 
+0245   40A0 FF FF FF FF 
+0245   40A4 FF FF FF FF 
+0245   40A8 FF FF FF FF 
+0245   40AC FF FF FF FF 
+0245   40B0 FF FF FF FF 
+0245   40B4 FF FF FF FF 
+0245   40B8 FF FF FF FF 
+0245   40BC FF FF FF FF 
+0245   40C0 FF FF FF FF 
+0245   40C4 FF FF FF FF 
+0245   40C8 FF FF FF FF 
+0245   40CC FF FF FF FF 
+0245   40D0 FF FF FF FF 
+0245   40D4 FF FF FF FF 
+0245   40D8 FF FF FF FF 
+0245   40DC FF FF FF FF 
+0245   40E0 FF FF FF FF 
+0245   40E4 FF FF FF FF 
+0245   40E8 FF FF FF FF 
+0245   40EC FF FF FF FF 
+0245   40F0 FF FF FF FF 
+0245   40F4 FF FF FF FF 
+0245   40F8 FF FF FF FF 
+0245   40FC FF FF FF FF 
+0246   4100             
+0247   5000                     .ORG    $5000
+0248   5000 FF FF FF FF         .FILL   $100,$FF
+0248   5004 FF FF FF FF 
+0248   5008 FF FF FF FF 
+0248   500C FF FF FF FF 
+0248   5010 FF FF FF FF 
+0248   5014 FF FF FF FF 
+0248   5018 FF FF FF FF 
+0248   501C FF FF FF FF 
+0248   5020 FF FF FF FF 
+0248   5024 FF FF FF FF 
+0248   5028 FF FF FF FF 
+0248   502C FF FF FF FF 
+0248   5030 FF FF FF FF 
+0248   5034 FF FF FF FF 
+0248   5038 FF FF FF FF 
+0248   503C FF FF FF FF 
+0248   5040 FF FF FF FF 
+0248   5044 FF FF FF FF 
+0248   5048 FF FF FF FF 
+0248   504C FF FF FF FF 
+0248   5050 FF FF FF FF 
+0248   5054 FF FF FF FF 
+0248   5058 FF FF FF FF 
+0248   505C FF FF FF FF 
+0248   5060 FF FF FF FF 
+0248   5064 FF FF FF FF 
+0248   5068 FF FF FF FF 
+0248   506C FF FF FF FF 
+0248   5070 FF FF FF FF 
+0248   5074 FF FF FF FF 
+0248   5078 FF FF FF FF 
+0248   507C FF FF FF FF 
+0248   5080 FF FF FF FF 
+0248   5084 FF FF FF FF 
+0248   5088 FF FF FF FF 
+0248   508C FF FF FF FF 
+0248   5090 FF FF FF FF 
+0248   5094 FF FF FF FF 
+0248   5098 FF FF FF FF 
+0248   509C FF FF FF FF 
+0248   50A0 FF FF FF FF 
+0248   50A4 FF FF FF FF 
+0248   50A8 FF FF FF FF 
+0248   50AC FF FF FF FF 
+0248   50B0 FF FF FF FF 
+0248   50B4 FF FF FF FF 
+0248   50B8 FF FF FF FF 
+0248   50BC FF FF FF FF 
+0248   50C0 FF FF FF FF 
+0248   50C4 FF FF FF FF 
+0248   50C8 FF FF FF FF 
+0248   50CC FF FF FF FF 
+0248   50D0 FF FF FF FF 
+0248   50D4 FF FF FF FF 
+0248   50D8 FF FF FF FF 
+0248   50DC FF FF FF FF 
+0248   50E0 FF FF FF FF 
+0248   50E4 FF FF FF FF 
+0248   50E8 FF FF FF FF 
+0248   50EC FF FF FF FF 
+0248   50F0 FF FF FF FF 
+0248   50F4 FF FF FF FF 
+0248   50F8 FF FF FF FF 
+0248   50FC FF FF FF FF 
+0249   5100             
+0250   6000                     .ORG    $6000
+0251   6000 FF FF FF FF         .FILL   $100,$FF
+0251   6004 FF FF FF FF 
+0251   6008 FF FF FF FF 
+0251   600C FF FF FF FF 
+0251   6010 FF FF FF FF 
+0251   6014 FF FF FF FF 
+0251   6018 FF FF FF FF 
+0251   601C FF FF FF FF 
+0251   6020 FF FF FF FF 
+0251   6024 FF FF FF FF 
+0251   6028 FF FF FF FF 
+0251   602C FF FF FF FF 
+0251   6030 FF FF FF FF 
+0251   6034 FF FF FF FF 
+0251   6038 FF FF FF FF 
+0251   603C FF FF FF FF 
+0251   6040 FF FF FF FF 
+0251   6044 FF FF FF FF 
+0251   6048 FF FF FF FF 
+0251   604C FF FF FF FF 
+0251   6050 FF FF FF FF 
+0251   6054 FF FF FF FF 
+0251   6058 FF FF FF FF 
+0251   605C FF FF FF FF 
+0251   6060 FF FF FF FF 
+0251   6064 FF FF FF FF 
+0251   6068 FF FF FF FF 
+0251   606C FF FF FF FF 
+0251   6070 FF FF FF FF 
+0251   6074 FF FF FF FF 
+0251   6078 FF FF FF FF 
+0251   607C FF FF FF FF 
+0251   6080 FF FF FF FF 
+0251   6084 FF FF FF FF 
+0251   6088 FF FF FF FF 
+0251   608C FF FF FF FF 
+0251   6090 FF FF FF FF 
+0251   6094 FF FF FF FF 
+0251   6098 FF FF FF FF 
+0251   609C FF FF FF FF 
+0251   60A0 FF FF FF FF 
+0251   60A4 FF FF FF FF 
+0251   60A8 FF FF FF FF 
+0251   60AC FF FF FF FF 
+0251   60B0 FF FF FF FF 
+0251   60B4 FF FF FF FF 
+0251   60B8 FF FF FF FF 
+0251   60BC FF FF FF FF 
+0251   60C0 FF FF FF FF 
+0251   60C4 FF FF FF FF 
+0251   60C8 FF FF FF FF 
+0251   60CC FF FF FF FF 
+0251   60D0 FF FF FF FF 
+0251   60D4 FF FF FF FF 
+0251   60D8 FF FF FF FF 
+0251   60DC FF FF FF FF 
+0251   60E0 FF FF FF FF 
+0251   60E4 FF FF FF FF 
+0251   60E8 FF FF FF FF 
+0251   60EC FF FF FF FF 
+0251   60F0 FF FF FF FF 
+0251   60F4 FF FF FF FF 
+0251   60F8 FF FF FF FF 
+0251   60FC FF FF FF FF 
+0252   6100             
+0253   7000                     .ORG    $7000
+0254   7000 FF FF FF FF         .FILL   $100,$FF
+0254   7004 FF FF FF FF 
+0254   7008 FF FF FF FF 
+0254   700C FF FF FF FF 
+0254   7010 FF FF FF FF 
+0254   7014 FF FF FF FF 
+0254   7018 FF FF FF FF 
+0254   701C FF FF FF FF 
+0254   7020 FF FF FF FF 
+0254   7024 FF FF FF FF 
+0254   7028 FF FF FF FF 
+0254   702C FF FF FF FF 
+0254   7030 FF FF FF FF 
+0254   7034 FF FF FF FF 
+0254   7038 FF FF FF FF 
+0254   703C FF FF FF FF 
+0254   7040 FF FF FF FF 
+0254   7044 FF FF FF FF 
+0254   7048 FF FF FF FF 
+0254   704C FF FF FF FF 
+0254   7050 FF FF FF FF 
+0254   7054 FF FF FF FF 
+0254   7058 FF FF FF FF 
+0254   705C FF FF FF FF 
+0254   7060 FF FF FF FF 
+0254   7064 FF FF FF FF 
+0254   7068 FF FF FF FF 
+0254   706C FF FF FF FF 
+0254   7070 FF FF FF FF 
+0254   7074 FF FF FF FF 
+0254   7078 FF FF FF FF 
+0254   707C FF FF FF FF 
+0254   7080 FF FF FF FF 
+0254   7084 FF FF FF FF 
+0254   7088 FF FF FF FF 
+0254   708C FF FF FF FF 
+0254   7090 FF FF FF FF 
+0254   7094 FF FF FF FF 
+0254   7098 FF FF FF FF 
+0254   709C FF FF FF FF 
+0254   70A0 FF FF FF FF 
+0254   70A4 FF FF FF FF 
+0254   70A8 FF FF FF FF 
+0254   70AC FF FF FF FF 
+0254   70B0 FF FF FF FF 
+0254   70B4 FF FF FF FF 
+0254   70B8 FF FF FF FF 
+0254   70BC FF FF FF FF 
+0254   70C0 FF FF FF FF 
+0254   70C4 FF FF FF FF 
+0254   70C8 FF FF FF FF 
+0254   70CC FF FF FF FF 
+0254   70D0 FF FF FF FF 
+0254   70D4 FF FF FF FF 
+0254   70D8 FF FF FF FF 
+0254   70DC FF FF FF FF 
+0254   70E0 FF FF FF FF 
+0254   70E4 FF FF FF FF 
+0254   70E8 FF FF FF FF 
+0254   70EC FF FF FF FF 
+0254   70F0 FF FF FF FF 
+0254   70F4 FF FF FF FF 
+0254   70F8 FF FF FF FF 
+0254   70FC FF FF FF FF 
+0255   7100             
+0256   8000                     .ORG    $8000
+0257   8000 FF FF FF FF         .FILL   $100,$FF
+0257   8004 FF FF FF FF 
+0257   8008 FF FF FF FF 
+0257   800C FF FF FF FF 
+0257   8010 FF FF FF FF 
+0257   8014 FF FF FF FF 
+0257   8018 FF FF FF FF 
+0257   801C FF FF FF FF 
+0257   8020 FF FF FF FF 
+0257   8024 FF FF FF FF 
+0257   8028 FF FF FF FF 
+0257   802C FF FF FF FF 
+0257   8030 FF FF FF FF 
+0257   8034 FF FF FF FF 
+0257   8038 FF FF FF FF 
+0257   803C FF FF FF FF 
+0257   8040 FF FF FF FF 
+0257   8044 FF FF FF FF 
+0257   8048 FF FF FF FF 
+0257   804C FF FF FF FF 
+0257   8050 FF FF FF FF 
+0257   8054 FF FF FF FF 
+0257   8058 FF FF FF FF 
+0257   805C FF FF FF FF 
+0257   8060 FF FF FF FF 
+0257   8064 FF FF FF FF 
+0257   8068 FF FF FF FF 
+0257   806C FF FF FF FF 
+0257   8070 FF FF FF FF 
+0257   8074 FF FF FF FF 
+0257   8078 FF FF FF FF 
+0257   807C FF FF FF FF 
+0257   8080 FF FF FF FF 
+0257   8084 FF FF FF FF 
+0257   8088 FF FF FF FF 
+0257   808C FF FF FF FF 
+0257   8090 FF FF FF FF 
+0257   8094 FF FF FF FF 
+0257   8098 FF FF FF FF 
+0257   809C FF FF FF FF 
+0257   80A0 FF FF FF FF 
+0257   80A4 FF FF FF FF 
+0257   80A8 FF FF FF FF 
+0257   80AC FF FF FF FF 
+0257   80B0 FF FF FF FF 
+0257   80B4 FF FF FF FF 
+0257   80B8 FF FF FF FF 
+0257   80BC FF FF FF FF 
+0257   80C0 FF FF FF FF 
+0257   80C4 FF FF FF FF 
+0257   80C8 FF FF FF FF 
+0257   80CC FF FF FF FF 
+0257   80D0 FF FF FF FF 
+0257   80D4 FF FF FF FF 
+0257   80D8 FF FF FF FF 
+0257   80DC FF FF FF FF 
+0257   80E0 FF FF FF FF 
+0257   80E4 FF FF FF FF 
+0257   80E8 FF FF FF FF 
+0257   80EC FF FF FF FF 
+0257   80F0 FF FF FF FF 
+0257   80F4 FF FF FF FF 
+0257   80F8 FF FF FF FF 
+0257   80FC FF FF FF FF 
+0258   8100             
+0259   9000                     .ORG    $9000
+0260   9000 FF FF FF FF         .FILL   $100,$FF
+0260   9004 FF FF FF FF 
+0260   9008 FF FF FF FF 
+0260   900C FF FF FF FF 
+0260   9010 FF FF FF FF 
+0260   9014 FF FF FF FF 
+0260   9018 FF FF FF FF 
+0260   901C FF FF FF FF 
+0260   9020 FF FF FF FF 
+0260   9024 FF FF FF FF 
+0260   9028 FF FF FF FF 
+0260   902C FF FF FF FF 
+0260   9030 FF FF FF FF 
+0260   9034 FF FF FF FF 
+0260   9038 FF FF FF FF 
+0260   903C FF FF FF FF 
+0260   9040 FF FF FF FF 
+0260   9044 FF FF FF FF 
+0260   9048 FF FF FF FF 
+0260   904C FF FF FF FF 
+0260   9050 FF FF FF FF 
+0260   9054 FF FF FF FF 
+0260   9058 FF FF FF FF 
+0260   905C FF FF FF FF 
+0260   9060 FF FF FF FF 
+0260   9064 FF FF FF FF 
+0260   9068 FF FF FF FF 
+0260   906C FF FF FF FF 
+0260   9070 FF FF FF FF 
+0260   9074 FF FF FF FF 
+0260   9078 FF FF FF FF 
+0260   907C FF FF FF FF 
+0260   9080 FF FF FF FF 
+0260   9084 FF FF FF FF 
+0260   9088 FF FF FF FF 
+0260   908C FF FF FF FF 
+0260   9090 FF FF FF FF 
+0260   9094 FF FF FF FF 
+0260   9098 FF FF FF FF 
+0260   909C FF FF FF FF 
+0260   90A0 FF FF FF FF 
+0260   90A4 FF FF FF FF 
+0260   90A8 FF FF FF FF 
+0260   90AC FF FF FF FF 
+0260   90B0 FF FF FF FF 
+0260   90B4 FF FF FF FF 
+0260   90B8 FF FF FF FF 
+0260   90BC FF FF FF FF 
+0260   90C0 FF FF FF FF 
+0260   90C4 FF FF FF FF 
+0260   90C8 FF FF FF FF 
+0260   90CC FF FF FF FF 
+0260   90D0 FF FF FF FF 
+0260   90D4 FF FF FF FF 
+0260   90D8 FF FF FF FF 
+0260   90DC FF FF FF FF 
+0260   90E0 FF FF FF FF 
+0260   90E4 FF FF FF FF 
+0260   90E8 FF FF FF FF 
+0260   90EC FF FF FF FF 
+0260   90F0 FF FF FF FF 
+0260   90F4 FF FF FF FF 
+0260   90F8 FF FF FF FF 
+0260   90FC FF FF FF FF 
+0261   9100             
+0262   A000                     .ORG    $A000
+0263   A000 FF FF FF FF         .FILL   $100,$FF
+0263   A004 FF FF FF FF 
+0263   A008 FF FF FF FF 
+0263   A00C FF FF FF FF 
+0263   A010 FF FF FF FF 
+0263   A014 FF FF FF FF 
+0263   A018 FF FF FF FF 
+0263   A01C FF FF FF FF 
+0263   A020 FF FF FF FF 
+0263   A024 FF FF FF FF 
+0263   A028 FF FF FF FF 
+0263   A02C FF FF FF FF 
+0263   A030 FF FF FF FF 
+0263   A034 FF FF FF FF 
+0263   A038 FF FF FF FF 
+0263   A03C FF FF FF FF 
+0263   A040 FF FF FF FF 
+0263   A044 FF FF FF FF 
+0263   A048 FF FF FF FF 
+0263   A04C FF FF FF FF 
+0263   A050 FF FF FF FF 
+0263   A054 FF FF FF FF 
+0263   A058 FF FF FF FF 
+0263   A05C FF FF FF FF 
+0263   A060 FF FF FF FF 
+0263   A064 FF FF FF FF 
+0263   A068 FF FF FF FF 
+0263   A06C FF FF FF FF 
+0263   A070 FF FF FF FF 
+0263   A074 FF FF FF FF 
+0263   A078 FF FF FF FF 
+0263   A07C FF FF FF FF 
+0263   A080 FF FF FF FF 
+0263   A084 FF FF FF FF 
+0263   A088 FF FF FF FF 
+0263   A08C FF FF FF FF 
+0263   A090 FF FF FF FF 
+0263   A094 FF FF FF FF 
+0263   A098 FF FF FF FF 
+0263   A09C FF FF FF FF 
+0263   A0A0 FF FF FF FF 
+0263   A0A4 FF FF FF FF 
+0263   A0A8 FF FF FF FF 
+0263   A0AC FF FF FF FF 
+0263   A0B0 FF FF FF FF 
+0263   A0B4 FF FF FF FF 
+0263   A0B8 FF FF FF FF 
+0263   A0BC FF FF FF FF 
+0263   A0C0 FF FF FF FF 
+0263   A0C4 FF FF FF FF 
+0263   A0C8 FF FF FF FF 
+0263   A0CC FF FF FF FF 
+0263   A0D0 FF FF FF FF 
+0263   A0D4 FF FF FF FF 
+0263   A0D8 FF FF FF FF 
+0263   A0DC FF FF FF FF 
+0263   A0E0 FF FF FF FF 
+0263   A0E4 FF FF FF FF 
+0263   A0E8 FF FF FF FF 
+0263   A0EC FF FF FF FF 
+0263   A0F0 FF FF FF FF 
+0263   A0F4 FF FF FF FF 
+0263   A0F8 FF FF FF FF 
+0263   A0FC FF FF FF FF 
+0264   A100             
+0265   B000                     .ORG    $B000
+0266   B000 FF FF FF FF         .FILL   $100,$FF
+0266   B004 FF FF FF FF 
+0266   B008 FF FF FF FF 
+0266   B00C FF FF FF FF 
+0266   B010 FF FF FF FF 
+0266   B014 FF FF FF FF 
+0266   B018 FF FF FF FF 
+0266   B01C FF FF FF FF 
+0266   B020 FF FF FF FF 
+0266   B024 FF FF FF FF 
+0266   B028 FF FF FF FF 
+0266   B02C FF FF FF FF 
+0266   B030 FF FF FF FF 
+0266   B034 FF FF FF FF 
+0266   B038 FF FF FF FF 
+0266   B03C FF FF FF FF 
+0266   B040 FF FF FF FF 
+0266   B044 FF FF FF FF 
+0266   B048 FF FF FF FF 
+0266   B04C FF FF FF FF 
+0266   B050 FF FF FF FF 
+0266   B054 FF FF FF FF 
+0266   B058 FF FF FF FF 
+0266   B05C FF FF FF FF 
+0266   B060 FF FF FF FF 
+0266   B064 FF FF FF FF 
+0266   B068 FF FF FF FF 
+0266   B06C FF FF FF FF 
+0266   B070 FF FF FF FF 
+0266   B074 FF FF FF FF 
+0266   B078 FF FF FF FF 
+0266   B07C FF FF FF FF 
+0266   B080 FF FF FF FF 
+0266   B084 FF FF FF FF 
+0266   B088 FF FF FF FF 
+0266   B08C FF FF FF FF 
+0266   B090 FF FF FF FF 
+0266   B094 FF FF FF FF 
+0266   B098 FF FF FF FF 
+0266   B09C FF FF FF FF 
+0266   B0A0 FF FF FF FF 
+0266   B0A4 FF FF FF FF 
+0266   B0A8 FF FF FF FF 
+0266   B0AC FF FF FF FF 
+0266   B0B0 FF FF FF FF 
+0266   B0B4 FF FF FF FF 
+0266   B0B8 FF FF FF FF 
+0266   B0BC FF FF FF FF 
+0266   B0C0 FF FF FF FF 
+0266   B0C4 FF FF FF FF 
+0266   B0C8 FF FF FF FF 
+0266   B0CC FF FF FF FF 
+0266   B0D0 FF FF FF FF 
+0266   B0D4 FF FF FF FF 
+0266   B0D8 FF FF FF FF 
+0266   B0DC FF FF FF FF 
+0266   B0E0 FF FF FF FF 
+0266   B0E4 FF FF FF FF 
+0266   B0E8 FF FF FF FF 
+0266   B0EC FF FF FF FF 
+0266   B0F0 FF FF FF FF 
+0266   B0F4 FF FF FF FF 
+0266   B0F8 FF FF FF FF 
+0266   B0FC FF FF FF FF 
+0267   B100             
+0268   B100             ; We fill the first 32 bytes of each of the last 4K regions with the high byte of the region
+0269   B100             ; (This shows up as the first 32 bytes in every 256 byte block of this region)
+0270   B100             ; We try to read them at the start of each 2K block, to determine if we are reading external or internal ROM
+0271   B100             ; In this way, we determine how much internal ROM there is
+0272   B100             
+0273   C000                     .ORG    $C000       ; External Memory in the last 16K
+0274   C000 C0 C0 C0 C0         .FILL   $20,$C0     ; If this data is read in Full Expansion mode at $C000, then this is not a 16K internal ROM chip
+0274   C004 C0 C0 C0 C0 
+0274   C008 C0 C0 C0 C0 
+0274   C00C C0 C0 C0 C0 
+0274   C010 C0 C0 C0 C0 
+0274   C014 C0 C0 C0 C0 
+0274   C018 C0 C0 C0 C0 
+0274   C01C C0 C0 C0 C0 
+0275   C020                                         ; If this data is read in Full Expansion mode at $C800, then this is not a 14K internal ROM chip
+0276   C020 FF FF FF FF         .FILL   $C100-$,$FF ; Fill the rest of this 256-byte block
+0276   C024 FF FF FF FF 
+0276   C028 FF FF FF FF 
+0276   C02C FF FF FF FF 
+0276   C030 FF FF FF FF 
+0276   C034 FF FF FF FF 
+0276   C038 FF FF FF FF 
+0276   C03C FF FF FF FF 
+0276   C040 FF FF FF FF 
+0276   C044 FF FF FF FF 
+0276   C048 FF FF FF FF 
+0276   C04C FF FF FF FF 
+0276   C050 FF FF FF FF 
+0276   C054 FF FF FF FF 
+0276   C058 FF FF FF FF 
+0276   C05C FF FF FF FF 
+0276   C060 FF FF FF FF 
+0276   C064 FF FF FF FF 
+0276   C068 FF FF FF FF 
+0276   C06C FF FF FF FF 
+0276   C070 FF FF FF FF 
+0276   C074 FF FF FF FF 
+0276   C078 FF FF FF FF 
+0276   C07C FF FF FF FF 
+0276   C080 FF FF FF FF 
+0276   C084 FF FF FF FF 
+0276   C088 FF FF FF FF 
+0276   C08C FF FF FF FF 
+0276   C090 FF FF FF FF 
+0276   C094 FF FF FF FF 
+0276   C098 FF FF FF FF 
+0276   C09C FF FF FF FF 
+0276   C0A0 FF FF FF FF 
+0276   C0A4 FF FF FF FF 
+0276   C0A8 FF FF FF FF 
+0276   C0AC FF FF FF FF 
+0276   C0B0 FF FF FF FF 
+0276   C0B4 FF FF FF FF 
+0276   C0B8 FF FF FF FF 
+0276   C0BC FF FF FF FF 
+0276   C0C0 FF FF FF FF 
+0276   C0C4 FF FF FF FF 
+0276   C0C8 FF FF FF FF 
+0276   C0CC FF FF FF FF 
+0276   C0D0 FF FF FF FF 
+0276   C0D4 FF FF FF FF 
+0276   C0D8 FF FF FF FF 
+0276   C0DC FF FF FF FF 
+0276   C0E0 FF FF FF FF 
+0276   C0E4 FF FF FF FF 
+0276   C0E8 FF FF FF FF 
+0276   C0EC FF FF FF FF 
+0276   C0F0 FF FF FF FF 
+0276   C0F4 FF FF FF FF 
+0276   C0F8 FF FF FF FF 
+0276   C0FC FF FF FF FF 
+0277   C100             
+0278   C100             
+0279   D000                     .ORG    $D000       ; External Memory in the last 12K
+0280   D000 D0 D0 D0 D0         .FILL   $20,$D0     ; If this data is read in Full Expansion mode at $D000, then this is not a 12K internal ROM chip
+0280   D004 D0 D0 D0 D0 
+0280   D008 D0 D0 D0 D0 
+0280   D00C D0 D0 D0 D0 
+0280   D010 D0 D0 D0 D0 
+0280   D014 D0 D0 D0 D0 
+0280   D018 D0 D0 D0 D0 
+0280   D01C D0 D0 D0 D0 
+0281   D020                                         ; If this data is read in Full Expansion mode at $D800, then this is not a 10K internal ROM chip
+0282   D020 FF FF FF FF         .FILL   $D100-$,$FF ; Fill the rest of this 256-byte block
+0282   D024 FF FF FF FF 
+0282   D028 FF FF FF FF 
+0282   D02C FF FF FF FF 
+0282   D030 FF FF FF FF 
+0282   D034 FF FF FF FF 
+0282   D038 FF FF FF FF 
+0282   D03C FF FF FF FF 
+0282   D040 FF FF FF FF 
+0282   D044 FF FF FF FF 
+0282   D048 FF FF FF FF 
+0282   D04C FF FF FF FF 
+0282   D050 FF FF FF FF 
+0282   D054 FF FF FF FF 
+0282   D058 FF FF FF FF 
+0282   D05C FF FF FF FF 
+0282   D060 FF FF FF FF 
+0282   D064 FF FF FF FF 
+0282   D068 FF FF FF FF 
+0282   D06C FF FF FF FF 
+0282   D070 FF FF FF FF 
+0282   D074 FF FF FF FF 
+0282   D078 FF FF FF FF 
+0282   D07C FF FF FF FF 
+0282   D080 FF FF FF FF 
+0282   D084 FF FF FF FF 
+0282   D088 FF FF FF FF 
+0282   D08C FF FF FF FF 
+0282   D090 FF FF FF FF 
+0282   D094 FF FF FF FF 
+0282   D098 FF FF FF FF 
+0282   D09C FF FF FF FF 
+0282   D0A0 FF FF FF FF 
+0282   D0A4 FF FF FF FF 
+0282   D0A8 FF FF FF FF 
+0282   D0AC FF FF FF FF 
+0282   D0B0 FF FF FF FF 
+0282   D0B4 FF FF FF FF 
+0282   D0B8 FF FF FF FF 
+0282   D0BC FF FF FF FF 
+0282   D0C0 FF FF FF FF 
+0282   D0C4 FF FF FF FF 
+0282   D0C8 FF FF FF FF 
+0282   D0CC FF FF FF FF 
+0282   D0D0 FF FF FF FF 
+0282   D0D4 FF FF FF FF 
+0282   D0D8 FF FF FF FF 
+0282   D0DC FF FF FF FF 
+0282   D0E0 FF FF FF FF 
+0282   D0E4 FF FF FF FF 
+0282   D0E8 FF FF FF FF 
+0282   D0EC FF FF FF FF 
+0282   D0F0 FF FF FF FF 
+0282   D0F4 FF FF FF FF 
+0282   D0F8 FF FF FF FF 
+0282   D0FC FF FF FF FF 
+0283   D100             
+0284   E000                     .ORG    $E000       ; External Memory in the last 8K
+0285   E000 E0 E0 E0 E0         .FILL   $20,$E0     ; If this data is read in Full Expansion mode at $E000, then this is not a 8K internal ROM chip
+0285   E004 E0 E0 E0 E0 
+0285   E008 E0 E0 E0 E0 
+0285   E00C E0 E0 E0 E0 
+0285   E010 E0 E0 E0 E0 
+0285   E014 E0 E0 E0 E0 
+0285   E018 E0 E0 E0 E0 
+0285   E01C E0 E0 E0 E0 
+0286   E020                                         ; If this data is read in Full Expansion mode at $E800, then this is not a 6K internal ROM chip
+0287   E020 FF FF FF FF         .FILL   $E100-$,$FF ; Fill the rest of this 256-byte block
+0287   E024 FF FF FF FF 
+0287   E028 FF FF FF FF 
+0287   E02C FF FF FF FF 
+0287   E030 FF FF FF FF 
+0287   E034 FF FF FF FF 
+0287   E038 FF FF FF FF 
+0287   E03C FF FF FF FF 
+0287   E040 FF FF FF FF 
+0287   E044 FF FF FF FF 
+0287   E048 FF FF FF FF 
+0287   E04C FF FF FF FF 
+0287   E050 FF FF FF FF 
+0287   E054 FF FF FF FF 
+0287   E058 FF FF FF FF 
+0287   E05C FF FF FF FF 
+0287   E060 FF FF FF FF 
+0287   E064 FF FF FF FF 
+0287   E068 FF FF FF FF 
+0287   E06C FF FF FF FF 
+0287   E070 FF FF FF FF 
+0287   E074 FF FF FF FF 
+0287   E078 FF FF FF FF 
+0287   E07C FF FF FF FF 
+0287   E080 FF FF FF FF 
+0287   E084 FF FF FF FF 
+0287   E088 FF FF FF FF 
+0287   E08C FF FF FF FF 
+0287   E090 FF FF FF FF 
+0287   E094 FF FF FF FF 
+0287   E098 FF FF FF FF 
+0287   E09C FF FF FF FF 
+0287   E0A0 FF FF FF FF 
+0287   E0A4 FF FF FF FF 
+0287   E0A8 FF FF FF FF 
+0287   E0AC FF FF FF FF 
+0287   E0B0 FF FF FF FF 
+0287   E0B4 FF FF FF FF 
+0287   E0B8 FF FF FF FF 
+0287   E0BC FF FF FF FF 
+0287   E0C0 FF FF FF FF 
+0287   E0C4 FF FF FF FF 
+0287   E0C8 FF FF FF FF 
+0287   E0CC FF FF FF FF 
+0287   E0D0 FF FF FF FF 
+0287   E0D4 FF FF FF FF 
+0287   E0D8 FF FF FF FF 
+0287   E0DC FF FF FF FF 
+0287   E0E0 FF FF FF FF 
+0287   E0E4 FF FF FF FF 
+0287   E0E8 FF FF FF FF 
+0287   E0EC FF FF FF FF 
+0287   E0F0 FF FF FF FF 
+0287   E0F4 FF FF FF FF 
+0287   E0F8 FF FF FF FF 
+0287   E0FC FF FF FF FF 
+0288   E100             
+0289   FF00                     .ORG    $FF00       ; External Memory in the last 4K
+0290   FF00 F0 F0 F0 F0         .FILL   $20,$F0     ; If this data is read in Full Expansion mode at $F000, then this is not a 4K internal ROM chip
+0290   FF04 F0 F0 F0 F0 
+0290   FF08 F0 F0 F0 F0 
+0290   FF0C F0 F0 F0 F0 
+0290   FF10 F0 F0 F0 F0 
+0290   FF14 F0 F0 F0 F0 
+0290   FF18 F0 F0 F0 F0 
+0290   FF1C F0 F0 F0 F0 
+0291   FF20                                         ; If this data is read in Full Expansion mode at $F800, then this is not a 2K internal ROM chip
+0292   FF20 FF FF FF FF         .FILL   $FFF4-$,$FF ; Fill the gap up to the Vectors in this 256-byte block
+0292   FF24 FF FF FF FF 
+0292   FF28 FF FF FF FF 
+0292   FF2C FF FF FF FF 
+0292   FF30 FF FF FF FF 
+0292   FF34 FF FF FF FF 
+0292   FF38 FF FF FF FF 
+0292   FF3C FF FF FF FF 
+0292   FF40 FF FF FF FF 
+0292   FF44 FF FF FF FF 
+0292   FF48 FF FF FF FF 
+0292   FF4C FF FF FF FF 
+0292   FF50 FF FF FF FF 
+0292   FF54 FF FF FF FF 
+0292   FF58 FF FF FF FF 
+0292   FF5C FF FF FF FF 
+0292   FF60 FF FF FF FF 
+0292   FF64 FF FF FF FF 
+0292   FF68 FF FF FF FF 
+0292   FF6C FF FF FF FF 
+0292   FF70 FF FF FF FF 
+0292   FF74 FF FF FF FF 
+0292   FF78 FF FF FF FF 
+0292   FF7C FF FF FF FF 
+0292   FF80 FF FF FF FF 
+0292   FF84 FF FF FF FF 
+0292   FF88 FF FF FF FF 
+0292   FF8C FF FF FF FF 
+0292   FF90 FF FF FF FF 
+0292   FF94 FF FF FF FF 
+0292   FF98 FF FF FF FF 
+0292   FF9C FF FF FF FF 
+0292   FFA0 FF FF FF FF 
+0292   FFA4 FF FF FF FF 
+0292   FFA8 FF FF FF FF 
+0292   FFAC FF FF FF FF 
+0292   FFB0 FF FF FF FF 
+0292   FFB4 FF FF FF FF 
+0292   FFB8 FF FF FF FF 
+0292   FFBC FF FF FF FF 
+0292   FFC0 FF FF FF FF 
+0292   FFC4 FF FF FF FF 
+0292   FFC8 FF FF FF FF 
+0292   FFCC FF FF FF FF 
+0292   FFD0 FF FF FF FF 
+0292   FFD4 FF FF FF FF 
+0292   FFD8 FF FF FF FF 
+0292   FFDC FF FF FF FF 
+0292   FFE0 FF FF FF FF 
+0292   FFE4 FF FF FF FF 
+0292   FFE8 FF FF FF FF 
+0292   FFEC FF FF FF FF 
+0292   FFF0 FF FF FF FF 
+0293   FFF4             
+0294   FFF4                     ; Vectors go here
+0295   FFF4             
+0296   FFF4                     .ORG    $FFF4
+0297   FFF4             
+0298   FFF4                     .MSFIRST            ; need this, or .word statements are backwards for this CPU!
+0299   FFF4             
+0300   FFF4 10 00               .word   START       ;  INT5 vector
+0301   FFF6 10 00               .word   START       ;  INT4 vector
+0302   FFF8 10 00               .word   START       ; ~INT3 vector
+0303   FFFA 10 00               .word   START       ;  INT2 vector
+0304   FFFC 10 00               .word   START       ; ~INT1 vector
+0305   FFFE 10 00               .word   START       ; ~RESET vector
+0306   10000             
+0307   10000                     .end
+0308   10000             
+0309   10000             
 tasm: Number of errors = 0
