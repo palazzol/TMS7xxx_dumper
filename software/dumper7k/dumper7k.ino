@@ -105,6 +105,8 @@ void printHeader()
 
   // Print sequence of parameters
   Serial.println();
+  Serial.println("*** TEST VERSION - ALWAYS DUMPS 16K ***");
+
   Serial.print(char(0x01));
   Serial.println("    Software: TMS7xxx Dumper - v1.3");
 
@@ -358,6 +360,7 @@ void processIDByte()
       g_serial_port = true;
       break;
   }
+  g_rom_bytes = 0x4000;  // Always dump 16K - FOR TEST PURPOSES ONLY
 }
 
 void gettingIDStateLogic()

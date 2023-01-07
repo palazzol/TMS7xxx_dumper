@@ -203,7 +203,7 @@
 0175   F89D 79 00 04            ADC     %$0,R4      ; ripple carry to high byte
 0176   F8A0 7D F9 04            CMP     %(ENDCODE/$100),R4          ; am I at high byte of ENDCODE?
 0177   F8A3 E6 ED               JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
-0178   F8A5 7D 22 05            CMP     %$(ENDCODE%$100),R5         ; am I at low byte of ENDCODE?
+0178   F8A5 7D 25 05            CMP     %$(ENDCODE%$100),R5         ; am I at low byte of ENDCODE?
 0179   F8A8 E6 E8               JNZ     CPYLOOP     ; if we are not done, loop to copy next byte
 0180   F8AA             
 0181   F8AA                     ; We reached ENDCODE, so our code copy to RAM is done
@@ -259,57 +259,58 @@
 0231   F8EC                                         ; or R4:R5 = F800-1, (Start of 2K Internal ROM)
 0232   F8EC                     
 0233   F8EC             DODUMP:
-0234   F8EC 72 FF 05            MOV     %$FF,R5
-0235   F8EF             
-0236   F8EF A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
-0237   F8F2 A3 F7 06            ANDP    %$F7,BPORT  ; PORTB.3 = ~SS = 0
-0238   F8F5 12 03               MOV     R3,A
-0239   F8F7 E0 02               JMP     JUMPIN
-0240   F8F9             
-0241   F8F9             NXTBYTE:
-0242   F8F9 9A 05               LDA     *R5         ; Read internal ROM byte
-0243   F8FB             JUMPIN:
-0244   F8FB 72 08 02            MOV     %$8,R2      ; R2 = 8, bit counter?
-0245   F8FE             NXTBIT:
-0246   F8FE A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
-0247   F901             
-0248   F901 BE                  RL      A           ; get each bit, MSB first
-0249   F902 E3 05               JHS     DOONE       ; if 1, jump
-0250   F904 A3 FD 06            ANDP    %$FD,BPORT  ; PORTB.1 = MOSI = 0
-0251   F907 E0 03               JMP     AHEAD
-0252   F909             DOONE:
-0253   F909 A4 02 06            ORP     %$02,BPORT  ; PORTB.1 = MOSI = 1
-0254   F90C             AHEAD:
-0255   F90C A4 04 06            ORP     %$04,BPORT  ; PORTB.2 = SCK = 1
-0256   F90F D2 02               DEC     R2          ; decrement bit counter
-0257   F911 E6 EB               JNZ     NXTBIT      ; do next bit
-0258   F913             
-0259   F913 D3 05               INC     R5          ; increment for next location to read
-0260   F915 79 00 04            ADC     %$0,R4
-0261   F918 E6 DF               JNZ     NXTBYTE     ; unless we roll over to 0000, do next byte
-0262   F91A             
-0263   F91A A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
-0264   F91D A4 08 06            ORP     %$08,BPORT  ; PORTB.3 = ~SS = 1
-0265   F920             
-0266   F920             DONE:
-0267   F920 E0 FE               JMP     DONE        ; loop forever
-0268   F922             ENDCODE:
-0269   F922             ;       End of code to be executed in RAM
-0270   F922             
-0271   F922             RPRGSIZE .equ   ENDCODE-RAMCODE
-0272   F922             
-0273   F922                     ; Vectors go here
-0274   F922             
-0275   FFF8                     .ORG    0FFF8H
-0276   FFF8             
-0277   FFF8                     .MSFIRST            ; need this, or .word statements are backwards for this CPU
-0278   FFF8             
-0279   FFF8 F8 20               .word   START
-0280   FFFA F8 20               .word   START
-0281   FFFC F8 20               .word   START
-0282   FFFE F8 20               .word   START
-0283   10000             
-0284   10000                     .end
-0285   10000             
+0234   F8EC 72 BF 04            MOV     %$BF,R4     ; dump all 16K every time - TESTING ONLY
+0235   F8EF 72 FF 05            MOV     %$FF,R5
+0236   F8F2             
+0237   F8F2 A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+0238   F8F5 A3 F7 06            ANDP    %$F7,BPORT  ; PORTB.3 = ~SS = 0
+0239   F8F8 12 03               MOV     R3,A
+0240   F8FA E0 02               JMP     JUMPIN
+0241   F8FC             
+0242   F8FC             NXTBYTE:
+0243   F8FC 9A 05               LDA     *R5         ; Read internal ROM byte
+0244   F8FE             JUMPIN:
+0245   F8FE 72 08 02            MOV     %$8,R2      ; R2 = 8, bit counter?
+0246   F901             NXTBIT:
+0247   F901 A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+0248   F904             
+0249   F904 BE                  RL      A           ; get each bit, MSB first
+0250   F905 E3 05               JHS     DOONE       ; if 1, jump
+0251   F907 A3 FD 06            ANDP    %$FD,BPORT  ; PORTB.1 = MOSI = 0
+0252   F90A E0 03               JMP     AHEAD
+0253   F90C             DOONE:
+0254   F90C A4 02 06            ORP     %$02,BPORT  ; PORTB.1 = MOSI = 1
+0255   F90F             AHEAD:
+0256   F90F A4 04 06            ORP     %$04,BPORT  ; PORTB.2 = SCK = 1
+0257   F912 D2 02               DEC     R2          ; decrement bit counter
+0258   F914 E6 EB               JNZ     NXTBIT      ; do next bit
+0259   F916             
+0260   F916 D3 05               INC     R5          ; increment for next location to read
+0261   F918 79 00 04            ADC     %$0,R4
+0262   F91B E6 DF               JNZ     NXTBYTE     ; unless we roll over to 0000, do next byte
+0263   F91D             
+0264   F91D A3 FB 06            ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
+0265   F920 A4 08 06            ORP     %$08,BPORT  ; PORTB.3 = ~SS = 1
+0266   F923             
+0267   F923             DONE:
+0268   F923 E0 FE               JMP     DONE        ; loop forever
+0269   F925             ENDCODE:
+0270   F925             ;       End of code to be executed in RAM
+0271   F925             
+0272   F925             RPRGSIZE .equ   ENDCODE-RAMCODE
+0273   F925             
+0274   F925                     ; Vectors go here
+0275   F925             
+0276   FFF8                     .ORG    0FFF8H
+0277   FFF8             
+0278   FFF8                     .MSFIRST            ; need this, or .word statements are backwards for this CPU
+0279   FFF8             
+0280   FFF8 F8 20               .word   START
+0281   FFFA F8 20               .word   START
+0282   FFFC F8 20               .word   START
+0283   FFFE F8 20               .word   START
+0284   10000             
+0285   10000                     .end
 0286   10000             
+0287   10000             
 tasm: Number of errors = 0

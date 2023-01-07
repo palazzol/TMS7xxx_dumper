@@ -231,6 +231,7 @@ FINISHUP:
                             ; or R4:R5 = F800-1, (Start of 2K Internal ROM)
         
 DODUMP:
+        MOV     %$BF,R4     ; dump all 16K every time - TESTING ONLY
         MOV     %$FF,R5
 
         ANDP    %$FB,BPORT  ; PORTB.2 = SCK = 0
