@@ -2173,8 +2173,8 @@
   (symbol (lib_id "Frank Misc:DS1225Y-150") (at 139.7 39.37 0) (unit 1)
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 5bab83de-2cb2-4fe3-8877-7d62e5b0d55c)
-    (property "Reference" "U2" (id 0) (at 167.64 29.21 0))
-    (property "Value" "DS1225Y" (id 1) (at 167.64 31.75 0))
+    (property "Reference" "U2" (id 0) (at 167.64 30.3743 0))
+    (property "Value" "2732" (id 1) (at 167.64 33.1494 0))
     (property "Footprint" "Evan's misc parts:21-0245A_28" (id 2) (at 139.7 39.37 0)
       (effects (font (size 1.27 1.27)) (justify left bottom) hide)
     )
@@ -2671,7 +2671,7 @@
       (reference "SW1") (unit 1) (value "SW_MEC_5E") (footprint "Button_Switch_THT:SW_TH_Tactile_Omron_B3F-10xx")
     )
     (path "/5bab83de-2cb2-4fe3-8877-7d62e5b0d55c"
-      (reference "U2") (unit 1) (value "DS1225Y") (footprint "Evan's misc parts:21-0245A_28")
+      (reference "U2") (unit 1) (value "2732") (footprint "Evan's misc parts:21-0245A_28")
     )
     (path "/30e22497-a1d6-4c33-93b9-15b0695925a2"
       (reference "U3") (unit 1) (value "74HCT373") (footprint "Package_DIP:DIP-20_W7.62mm")

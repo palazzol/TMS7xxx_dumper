@@ -61,7 +61,6 @@
         "courtyards_overlap|82397001|140361001|2e842263-c0ba-46fd-a760-6624d4c78278|eac6f92b-1dca-4090-b9fb-d5dd757fde8a",
         "courtyards_overlap|97895001|104245001|7fdc14a9-f309-44c9-84ab-083b8d249668|c49d23ab-146d-4089-864f-2d22b5b414b9",
         "courtyards_overlap|97895001|106150001|7fdc14a9-f309-44c9-84ab-083b8d249668|c49d23ab-146d-4089-864f-2d22b5b414b9",
-        "courtyards_overlap|97895001|109325001|39a098e6-513b-420c-bea4-da8aa54a81fe|70e4263f-d95a-4431-b3f3-cfc800c82056",
         "courtyards_overlap|97895001|110595001|39a098e6-513b-420c-bea4-da8aa54a81fe|70e4263f-d95a-4431-b3f3-cfc800c82056",
         "courtyards_overlap|97895001|115040001|55c6a896-bc50-4f6e-8630-f9d93838f599|6d4a937c-f0ac-45a6-b2b0-6bf7d5647558",
         "courtyards_overlap|99165001|129645001|6b7c1048-12b6-46b2-b762-fa3ad30472dd|f51d6720-3cd3-4c3d-8979-4df4b50b3cad",
@@ -133,7 +132,8 @@
       },
       "track_widths": [
         0.0,
-        0.4
+        0.4,
+        1.0
       ],
       "via_dimensions": [
         {
