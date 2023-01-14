@@ -33,9 +33,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 0.8,
-          "height": 1.6,
-          "width": 1.6
+          "drill": 0.762,
+          "height": 1.524,
+          "width": 1.524
         },
         "silk_line_width": 0.15,
         "silk_text_italic": false,
@@ -48,26 +48,8 @@
           "min_clearance": 0.508
         }
       },
-      "diff_pair_dimensions": [
-        {
-          "gap": 0.0,
-          "via_gap": 0.0,
-          "width": 0.0
-        }
-      ],
-      "drc_exclusions": [
-        "courtyards_overlap|121055001|103275001|18ca5aef-6a2c-41ac-9e7f-bf7acb716e53|d4c9471f-7503-4339-928c-d1abae1eede6",
-        "courtyards_overlap|81189321|96905001|2e842263-c0ba-46fd-a760-6624d4c78278|8d8bbbeb-525c-475d-aeaa-16d77c6c317a",
-        "courtyards_overlap|82397001|140361001|2e842263-c0ba-46fd-a760-6624d4c78278|eac6f92b-1dca-4090-b9fb-d5dd757fde8a",
-        "courtyards_overlap|97895001|104245001|7fdc14a9-f309-44c9-84ab-083b8d249668|c49d23ab-146d-4089-864f-2d22b5b414b9",
-        "courtyards_overlap|97895001|106150001|7fdc14a9-f309-44c9-84ab-083b8d249668|c49d23ab-146d-4089-864f-2d22b5b414b9",
-        "courtyards_overlap|97895001|110595001|39a098e6-513b-420c-bea4-da8aa54a81fe|70e4263f-d95a-4431-b3f3-cfc800c82056",
-        "courtyards_overlap|97895001|115040001|55c6a896-bc50-4f6e-8630-f9d93838f599|6d4a937c-f0ac-45a6-b2b0-6bf7d5647558",
-        "courtyards_overlap|99165001|129645001|6b7c1048-12b6-46b2-b762-fa3ad30472dd|f51d6720-3cd3-4c3d-8979-4df4b50b3cad",
-        "courtyards_overlap|99165001|137265001|4b03e854-02fe-44cc-bece-f8268b7cae54|4ec9364d-b723-45b7-bdba-20e0efd8d7a9",
-        "courtyards_overlap|99292001|134725001|4b03e854-02fe-44cc-bece-f8268b7cae54|4ec9364d-b723-45b7-bdba-20e0efd8d7a9",
-        "silk_over_copper|78105000|99565000|c106154f-d948-43e5-abfa-e1b96055d91b|021ed89a-ca5a-454a-8f0d-f9d80781599b"
-      ],
+      "diff_pair_dimensions": [],
+      "drc_exclusions": [],
       "meta": {
         "version": 2
       },
@@ -98,7 +80,7 @@
         "pth_inside_courtyard": "ignore",
         "shorting_items": "error",
         "silk_over_copper": "warning",
-        "silk_overlap": "ignore",
+        "silk_overlap": "warning",
         "skew_out_of_range": "error",
         "through_hole_pad_without_hole": "error",
         "too_many_vias": "error",
@@ -130,17 +112,8 @@
         "solder_mask_min_width": 0.0,
         "use_height_for_length_calcs": true
       },
-      "track_widths": [
-        0.0,
-        0.4,
-        1.0
-      ],
-      "via_dimensions": [
-        {
-          "diameter": 0.0,
-          "drill": 0.0
-        }
-      ],
+      "track_widths": [],
+      "via_dimensions": [],
       "zones_allow_external_fillets": false,
       "zones_use_no_outline": true
     },
@@ -360,7 +333,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "dumper.kicad_pro",
+    "filename": "tms7000 n2l adapter.kicad_pro",
     "version": 1
   },
   "net_settings": {
@@ -439,7 +412,7 @@
   },
   "sheets": [
     [
-      "f0456bfc-c183-47bc-89a4-deb68d537bfb",
+      "a8f60788-8601-45dc-97d8-f72e2436a149",
       ""
     ]
   ],
