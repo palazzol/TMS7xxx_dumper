@@ -183,10 +183,10 @@ bus_event_t processBusState()
   {
     { BUS_ADDR_AVAILABLE,   BIT_ALATCH, 0, 
                             BIT_ALATCH, BIT_ALATCH },
-    { BUS_DATA_R_AVAILABLE, BIT_nENABLE | BIT_RnW,               BIT_RnW,  
-                            BIT_nENABLE | BIT_RnW, BIT_nENABLE | BIT_RnW },
-    { BUS_DATA_W_AVAILABLE, BIT_nENABLE | BIT_RnW,                     0,
-                            BIT_nENABLE | BIT_RnW, BIT_nENABLE },
+    { BUS_DATA_R_AVAILABLE, BIT_nENABLE | BIT_RnW | BIT_CLKOUT, 0 | BIT_RnW | BIT_CLKOUT,  
+                            BIT_nENABLE | BIT_RnW | BIT_CLKOUT, 0 | BIT_RnW |          0 },
+    { BUS_DATA_W_AVAILABLE, BIT_nENABLE | BIT_RnW | BIT_CLKOUT, 0 |       0 | BIT_CLKOUT,  
+                            BIT_nENABLE | BIT_RnW | BIT_CLKOUT, 0 |       0 |          0 },
     { BUS_NOEVENT,          0x00, 0x00, 
                             0x00, 0x00 },
   };
@@ -536,6 +536,7 @@ void gettingIDStateLogic()
 
   // If no byte, clock some more
   bus_event_t bus_event = processBusState();
+  uint8_t bus = readAddrDataBus();
 //#define DEBUG_BUS
 #ifdef DEBUG_BUS
   for(int i=3;i>=0;i--)
@@ -548,20 +549,21 @@ void gettingIDStateLogic()
   }
   Serial.print(bus_event);
   Serial.print(' ');
-  uint8_t bus = readAddrDataBus();
   Serial.print(bus,HEX);
   Serial.print(' ');
   Serial.println(s_cycle);
 #endif
   s_cycle++;
-  
-//  if (bus_event != BUS_NOEVENT)
-//  {
-//    uint8_t bus = readAddrDataBus();
-//    Serial.print((int)bus_event);
-//    Serial.print(' ');
-//    Serial.println(bus,HEX);
-//  }
+
+//#define DEBUG_BUS_EVENT
+#ifdef DEBUG_BUS_EVENT
+  if (bus_event != BUS_NOEVENT)
+  {
+    Serial.print((int)bus_event);
+    Serial.print(' ');
+    Serial.println(bus,HEX);
+  }
+#endif
 
   if (bus_event == BUS_ADDR_AVAILABLE)
   {
