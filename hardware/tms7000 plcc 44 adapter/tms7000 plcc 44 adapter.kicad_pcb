@@ -83,7 +83,7 @@
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
-      (outputdirectory "tms7000 plcc adapter gerbers/")
+      (outputdirectory "tms7000 plcc 44 adapter gerbers/")
     )
   )
 

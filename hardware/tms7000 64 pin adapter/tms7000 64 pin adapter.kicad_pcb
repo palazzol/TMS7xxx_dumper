@@ -70,7 +70,7 @@
       (mirror false)
       (drillshape 0)
       (scaleselection 1)
-      (outputdirectory "tms7000 n2l adapter gerbers/")
+      (outputdirectory "tms7000 64 pin adapter gerbers/")
     )
   )
 
