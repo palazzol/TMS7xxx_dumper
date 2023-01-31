@@ -4016,7 +4016,7 @@
   (gr_text "Code loaded into the EPROM/NVRAM runs \nand dumps the internal code of the PIC7000 to the Arduino." (at 147.955 123.825 90) (layer "B.SilkS") (tstamp f3e0121b-16be-4a35-bbcd-5c3900d86572)
     (effects (font (size 1 1) (thickness 0.15)) (justify mirror))
   )
-  (gr_text "Ver. B" (at 126.238 96.52) (layer "F.SilkS") (tstamp 0bc2f6dc-1b32-418f-91ab-91898978e575)
+  (gr_text "Ver. A" (at 126.238 96.52) (layer "F.SilkS") (tstamp 0bc2f6dc-1b32-418f-91ab-91898978e575)
     (effects (font (size 1 1) (thickness 0.15)))
   )
   (gr_text "3" (at 163.185 119.38) (layer "F.SilkS") (tstamp 2f30dde4-b7c4-4071-bef3-0cc9c2160e60)
