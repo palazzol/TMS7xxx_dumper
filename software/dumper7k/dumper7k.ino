@@ -51,6 +51,8 @@ uint16_t g_ram_bytes = 0;
 uint16_t g_rom_bytes = 0;
 bool g_serial_port = false;
 bool g_cmos = false;
+uint16_t g_dot_count = 0;
+bool g_doing_dots = false;
 
 // bus state  - bit0-3
 #define BIT_ALATCH  (1 << 0)
@@ -128,6 +130,14 @@ void clockPulse()
 {
   static bool s_state = false;
 
+  if (g_doing_dots) {
+    g_dot_count++;
+    g_dot_count %= 0x1000;
+    if (g_dot_count == 0) {
+      Serial.print('.');
+    }
+  }
+  
   // Slow version
   if (s_state == false)
   {
@@ -214,10 +224,6 @@ void printHeader()
   processIDByte();
 
   // Print sequence of parameters
-  Serial.println();
-  Serial.print(char(0x01));
-  Serial.println("    Software: TMS7xxx Dumper - v1.3");
-
   Serial.print(char(0x01));
   Serial.print(  "  DetectedID: ");
   Serial.println(g_number);
@@ -312,6 +318,20 @@ void goToGettingIDState()
     clockPulse();
   }
 
+  // Check for process here
+  //Do not touch the board when detecting process, it can erroneously read as CMOS
+  delay(100);
+  if (analogRead(PIN_CLKOUT) > 950) //determined with a few chips on this platform (arduino nano)
+    g_cmos = true;
+
+  Serial.println();
+  Serial.print(char(0x01));
+  Serial.println("    Software: TMS7xxx Dumper - v1.3");
+  Serial.println();
+
+  Serial.print("Analyzing IC...");
+  g_doing_dots = true;
+    
   // Reset pin high
   digitalWrite(PIN_nRESET, HIGH);
 
@@ -322,11 +342,6 @@ void goToGettingIDState()
 
 void processIDByte()
 {
-  //Serial.println(analogRead(PIN_ANALOG));
-  //Do not touch the board when detecting process, it can erroneously read as CMOS
-  if (analogRead(PIN_RnW) > 880) //determined with exactly 2 chips on this platform (arduino nano)
-    g_cmos = true;
-
   if (g_ID_byte & 0x01)
     g_serial_port = true;
   else
@@ -509,7 +524,28 @@ void processIDByte()
         g_number = "SE70CP162"; // Piggyback
       else
         g_number = "SE70P162"; // Piggyback
-      break;     
+      break;
+    case 0x043:
+      if (g_cmos)
+        g_number = "TMS70C08";
+      else
+        g_number = "Unknown_TMS7008";
+      break;
+    case 0x04b:
+      if (g_cmos)
+        g_number = "TMS70C48";
+      else
+        g_number = "Unknown_TMS7048";
+      break;
+    case 0x053:
+      if (g_cmos)
+        g_number = "SE70CP168"; // Piggyback
+      else
+        g_number = "Unknown_SE70P168";
+      break;
+    default:
+        g_number = "Unknown_ID_0x" + String(g_ID_byte, HEX);
+        break;
   }
 }
 
@@ -603,6 +639,10 @@ void gettingIDStateLogic()
 
 void goToWaitingState()
 {
+  g_doing_dots = false;
+  Serial.println();
+  Serial.println();
+
   // Reset pin low
   digitalWrite(PIN_nRESET, LOW);
   // LED off
