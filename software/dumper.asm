@@ -72,6 +72,7 @@ IOCNT0  .equ    0       ; Peripheral address to control CPU modes
 ARDADDR .equ    $1000   ; Address to write a byte to the Arduino
 SCTL1   .equ    21      ; Peripheral address to probe for a Serial Port on the 70x2
 SCTL1C  .equ    24      ; Peripheral address to probe for a Serial Port on the 70Cx2
+FDDR    .equ    $1F     ; Peripheral address to probe for Port F
 
 RAMDEST .equ    $0008       ; location in ram for the code to be copied into and run from
 
@@ -138,19 +139,29 @@ SERCHKC:
         ANDP    %$FC,SCTL1C  ; zero the 2 LS bits
         MOVP    SCTL1C,A
         AND     %$03,A
-        JNZ     COPYCODE     ; fail if not zero
+        JNZ     CHKPORT      ; fail if not zero
         ORP     %$01,SCTL1C  ; set the bottom bit
         MOVP    SCTL1C,A
         AND     %$03,A 
         CMP     %$01,A       ; check if it's a one now
-        JNZ     COPYCODE     ; or fail
+        JNZ     CHKPORT      ; or fail
         ORP     %$02,SCTL1C  ; set the next bit
         MOVP    SCTL1C,A
         AND     %$03,A 
         CMP     %$03,A       ; should be 3 now
-        JNZ     COPYCODE     ; if not fail
+        JNZ     CHKPORT      ; if not fail
 SERFOUND:
-        OR      %$01,R3     ; UART detected, set this bit
+        OR      %$01,R3      ; UART detected, set this bit
+
+CHKPORT:
+        ANDP    %$00,FDDR
+        MOVP    FDDR,A
+        JNZ     COPYCODE
+        ORP     %$FF,FDDR
+        MOVP    FDDR,A
+        CMP     %$FF,A
+        JNZ     COPYCODE
+        OR      %$40,R3      ; Set bit 6 if this port exists
 
         ; Copy code from External ROM to RAM
 
