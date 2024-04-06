@@ -1,5 +1,5 @@
-Name                                                    CRC16 CRC32    SHA1
--------------------------------------------------------  ---- -------- ------------------------------
+Name                                                     CSUM CRC32    SHA1
+-------------------------------------------------------  ---- -------- ----------------------------------------
                                              75305.u200  95fd 42bb6af2 642dede16cb4ef2c5b9eaae79e28054f1111eef8
                                              c11002.bin  c503 a21bf6ab 3da8435ecbee143e7fa149ee8e1c92949bade1d8
                                              c70009.ic2  b0ad 55a2f7c0 530e3de42f2e304c8f4805ad389f38a459ec4e33
@@ -30,4 +30,3 @@ TMS70C02FNL_8224018_LBW8904_C1985TI_20230107_225024.bin  4bd6 44d9ff00 0a2d3e77d
                  TMS70C02NL_MAS8726_20221227_224902.bin  a5a2 0b2a9bc2 d01dea72d9e6d3ab12572620b5ec7dad9ed040b0
                         TMS70C08FNL_EUO9810_AMS8923.bin  a754 eac14633 8a5e5c510b1b736145cb85349913cacad8d5aac7
                              TMS70C08_MBYdelta22200.bin  3bce 320409cc dc0eed0d7fdcfaf83aa990f6f628741807e2a0ed
-
