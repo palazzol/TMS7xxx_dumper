@@ -1,32 +1,30 @@
-Name                                                     CSUM CRC32    SHA1
--------------------------------------------------------  ---- -------- ----------------------------------------
-                                             75305.u200  95fd 42bb6af2 642dede16cb4ef2c5b9eaae79e28054f1111eef8
-                                             c11002.bin  c503 a21bf6ab 3da8435ecbee143e7fa149ee8e1c92949bade1d8
-                                             c70009.ic2  b0ad 55a2f7c0 530e3de42f2e304c8f4805ad389f38a459ec4e33
-                                             c70011.ic2  32c6 b4d0a5c1 3ff41946d014f72220a88803023b6a06d5086ce4
-                                            cts256a.bin  aee6 8a5ee8e0 205b89da42ffc4235a204407d175072f127ee344
-                                       exeltel_7040.bin  5dad 2792f02f 442a852eb68ef78974733d169084752a131de23d
-                                       exeltel_7042.bin  69bc a0163507 8452849df7eac8a89cf03ee98e2306047c1c4c38
-                                           exl100in.bin  5eb4 049109a3 98a07297dcdacef41c793c197b6496dac1e8e744
-                                        exl100_7041.bin  69bc 38f6fc7a b71d545664a974d8ad39bdf600c5b9884c3efab6
-         NAD_CC01_C25311NF_74015_FWY_W604_TMS70CT40.bin  9795 ddc8b565 94a0321c44226d0de856f7eeee518da5184d1196
-                                        PIC7040-510.bin  aa36 a8e2eb98 7c17dcbc21757535ce0b3a9e1ce5ca61319d3606
-                                        PIC7041-023.bin  f6fc 1b154966 3106c03f80f8b691467588eee1e8ef010749af1f
-                                        PIC7041-025.bin  f781 7ddff83e fcb598f4dc3277d8154c7f22af4f1ca13bd8c8fc
-                                        PIC7041-036.bin  0f40 92f8ebc8 1f7ce24671ae5b8398d412e02a412cd4dff6e481
-                   pylo_1-7571A1-2_MFY(delta)817_00.bin  7661 0cb01059 68a422cef6513e8eed2d83d492e2be11d049d183
-               ti-hexbus-modem-tms70c20an2l-c71003s.bin  403f ba7e9d4e 066cc1b60d4330aa29f06c01764d392ec4a0a7d7
-                 ti-hexbus-video-x-c14020n21-4k-rom.bin  a081 0fd76f80 0a2af7c7163e9293bf2c971ef2e54b5a4a0c28df
-  TMS7000NL-2_DBU8332_C1981TI_20332_20230106_201943.bin  a0bc bdd0bdbc 03e3d2c3e3a65a41737f8ae46ec4ae97fa460c25
-  TMS7000NL-2_DCU8428_C1981TI_14762_20230106_202546.bin  7185 2277977e d7e9942cdd01781f2618b1896ae0d1391a905878
-   TMS7001NL-4_DAU8323_C1981TI_8105_20230106_203127.bin  9d4d cea0b64f 8563e5eb8b8eee1b7724d2d4f9db9c2759bc591d
-   TMS7001NL-4_DAU8323_C1981TI_8105_20240406_015726.bin  a085 fab0a4c5 2d15a269426560b88d2d4acde9cf66b4bba31fd0
-   TMS7001NL-4_DAU8323_C1981TI_8105_20240406_020321.bin  9d4d cea0b64f 8563e5eb8b8eee1b7724d2d4f9db9c2759bc591d
-TMS70C00N2L_C1981TI_MAS8414_QLA0738_20230118_215139.bin  403f ba7e9d4e 066cc1b60d4330aa29f06c01764d392ec4a0a7d7
-    TMS70C00N2L_C1981TI_MAU8345_947_20240331_013749.bin  c503 a21bf6ab 3da8435ecbee143e7fa149ee8e1c92949bade1d8
-      TMS70C00NL_C1981_MAS8432_5302_20240330_235720.bin  403f ba7e9d4e 066cc1b60d4330aa29f06c01764d392ec4a0a7d7
-TMS70C02FNL_8224018_LBW8904_C1985TI_20230107_225024.bin  4bd6 44d9ff00 0a2d3e77d6a1fb2f313d4a6c6b42054de98bb3ea
-   TMS70C02NL_02030_CWY_W123_1981TI_20221222_190248.bin  8b89 19500c80 6666cebb7963d1480cffc3be04cfb8cd8c19199d
-                 TMS70C02NL_MAS8726_20221227_224902.bin  a5a2 0b2a9bc2 d01dea72d9e6d3ab12572620b5ec7dad9ed040b0
-                        TMS70C08FNL_EUO9810_AMS8923.bin  a754 eac14633 8a5e5c510b1b736145cb85349913cacad8d5aac7
-                             TMS70C08_MBYdelta22200.bin  3bce 320409cc dc0eed0d7fdcfaf83aa990f6f628741807e2a0ed
+Name                                                     SIZE CSUM CRC32    SHA1
+-------------------------------------------------------  ---- ---- -------- ----------------------------------------
+                                             c11002.bin   800 c503 a21bf6ab 3da8435ecbee143e7fa149ee8e1c92949bade1d8
+                                            cts256a.bin  1000 aee6 8a5ee8e0 205b89da42ffc4235a204407d175072f127ee344
+                                       exeltel_7040.bin  1000 5dad 2792f02f 442a852eb68ef78974733d169084752a131de23d
+                                       exeltel_7042.bin  1000 69bc a0163507 8452849df7eac8a89cf03ee98e2306047c1c4c38
+                                           exl100in.bin   800 5eb4 049109a3 98a07297dcdacef41c793c197b6496dac1e8e744
+                                        exl100_7041.bin  1000 69bc 38f6fc7a b71d545664a974d8ad39bdf600c5b9884c3efab6
+         NAD_CC01_C25311NF_74015_FWY_W604_TMS70CT40.bin  1000 9795 ddc8b565 94a0321c44226d0de856f7eeee518da5184d1196
+                                        PIC7040-510.bin  1000 aa36 a8e2eb98 7c17dcbc21757535ce0b3a9e1ce5ca61319d3606
+                                        PIC7041-023.bin  1000 f6fc 1b154966 3106c03f80f8b691467588eee1e8ef010749af1f
+                                        PIC7041-025.bin  1000 f781 7ddff83e fcb598f4dc3277d8154c7f22af4f1ca13bd8c8fc
+                                        PIC7041-036.bin  1000 0f40 92f8ebc8 1f7ce24671ae5b8398d412e02a412cd4dff6e481
+                   pylo_1-7571A1-2_MFY(delta)817_00.bin  1000 7661 0cb01059 68a422cef6513e8eed2d83d492e2be11d049d183
+               ti-hexbus-modem-tms70c20an2l-c71003s.bin   800 403f ba7e9d4e 066cc1b60d4330aa29f06c01764d392ec4a0a7d7
+                 ti-hexbus-video-x-c14020n21-4k-rom.bin  1000 a081 0fd76f80 0a2af7c7163e9293bf2c971ef2e54b5a4a0c28df
+  TMS7000NL-2_DBU8332_C1981TI_20332_20230106_201943.bin  1000 a0bc bdd0bdbc 03e3d2c3e3a65a41737f8ae46ec4ae97fa460c25
+  TMS7000NL-2_DCU8428_C1981TI_14762_20230106_202546.bin  1000 7185 2277977e d7e9942cdd01781f2618b1896ae0d1391a905878
+   TMS7001NL-4_DAU8323_C1981TI_8105_20230106_203127.bin  1000 9d4d cea0b64f 8563e5eb8b8eee1b7724d2d4f9db9c2759bc591d
+   TMS7001NL-4_DAU8323_C1981TI_8105_20240406_015726.bin  1000 a085 fab0a4c5 2d15a269426560b88d2d4acde9cf66b4bba31fd0
+   TMS7001NL-4_DAU8323_C1981TI_8105_20240406_020321.bin  1000 9d4d cea0b64f 8563e5eb8b8eee1b7724d2d4f9db9c2759bc591d
+TMS70C00N2L_C1981TI_MAS8414_QLA0738_20230118_215139.bin   800 403f ba7e9d4e 066cc1b60d4330aa29f06c01764d392ec4a0a7d7
+    TMS70C00N2L_C1981TI_MAU8345_947_20240331_013749.bin   800 c503 a21bf6ab 3da8435ecbee143e7fa149ee8e1c92949bade1d8
+      TMS70C00NL_C1981_MAS8432_5302_20240330_235720.bin   800 403f ba7e9d4e 066cc1b60d4330aa29f06c01764d392ec4a0a7d7
+TMS70C02FNL_8224018_LBW8904_C1985TI_20230107_225024.bin  1000 4bd6 44d9ff00 0a2d3e77d6a1fb2f313d4a6c6b42054de98bb3ea
+   TMS70C02NL_02030_CWY_W123_1981TI_20221222_190248.bin  1000 8b89 19500c80 6666cebb7963d1480cffc3be04cfb8cd8c19199d
+                 TMS70C02NL_MAS8726_20221227_224902.bin  1000 a5a2 0b2a9bc2 d01dea72d9e6d3ab12572620b5ec7dad9ed040b0
+                        TMS70C08FNL_EUO9810_AMS8923.bin  1000 a754 eac14633 8a5e5c510b1b736145cb85349913cacad8d5aac7
+ TMS70C08_C36300-PG_MAS(delta)00500_20240419_211513.bin  1000 a754 eac14633 8a5e5c510b1b736145cb85349913cacad8d5aac7
+                             TMS70C08_MBYdelta22200.bin  1000 3bce 320409cc dc0eed0d7fdcfaf83aa990f6f628741807e2a0ed
